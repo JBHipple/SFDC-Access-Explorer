@@ -10,25 +10,27 @@
       disabled={refreshing}
       onclick={handleRefresh}
     ></lightning-button-icon>
-    <lightning-tabset active-tab-value={activeTab}>
-      <lightning-tab label="By User" value="user" onactive={handleTabActive}>
-        <c-access-explorer-user-view
-          selection={userSelection}
-          onselectionchange={handleUserSelection}
-          onviewentity={handleViewEntity}
-        ></c-access-explorer-user-view>
-      </lightning-tab>
-      <lightning-tab
-        label="By Entity"
-        value="entity"
-        onactive={handleTabActive}
-      >
-        <c-access-explorer-entity-view
-          selection={entitySelection}
-          onselectionchange={handleEntitySelection}
-          onviewuser={handleViewUser}
-        ></c-access-explorer-entity-view>
-      </lightning-tab>
-    </lightning-tabset>
+    <div class="slds-p-horizontal_medium slds-p-bottom_small">
+      <lightning-tabset active-tab-value={activeTab}>
+        <lightning-tab label="By User" value="user" onactive={handleTabActive}>
+          <c-access-explorer-user-view
+            selection={userSelection}
+            onselectionchange={handleUserSelection}
+            onviewentity={handleViewEntity}
+          ></c-access-explorer-user-view>
+        </lightning-tab>
+        <lightning-tab
+          label="By Entity"
+          value="entity"
+          onactive={handleTabActive}
+        >
+          <c-access-explorer-entity-view
+            selection={entitySelection}
+            onselectionchange={handleEntitySelection}
+            onviewuser={handleViewUser}
+          ></c-access-explorer-entity-view>
+        </lightning-tab>
+      </lightning-tabset>
+    </div>
   </lightning-card>
 </template>
