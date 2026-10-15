@@ -1,0 +1,43 @@
+[
+  {
+    "entityType": "SOBJECT_TYPE",
+    "label": "Objects",
+    "items": [
+      {
+        "entityType": "SOBJECT_TYPE",
+        "key": "Account",
+        "label": "Account",
+        "apiName": "Account",
+        "summary": "Read, Edit",
+        "hasChildren": true
+      },
+      {
+        "entityType": "SOBJECT_TYPE",
+        "key": "Contact",
+        "label": "Contact",
+        "apiName": "Contact",
+        "summary": "Read",
+        "hasChildren": true
+      }
+    ]
+  },
+  {
+    "entityType": "SYSTEM_PERMISSION",
+    "label": "System Permissions",
+    "items": [
+      {
+        "entityType": "SYSTEM_PERMISSION",
+        "key": "PermissionsApiEnabled",
+        "label": "API Enabled",
+        "apiName": "PermissionsApiEnabled",
+        "summary": "Enabled",
+        "hasChildren": false
+      }
+    ]
+  },
+  {
+    "entityType": "APEX_CLASS",
+    "label": "Apex Classes",
+    "items": []
+  }
+]

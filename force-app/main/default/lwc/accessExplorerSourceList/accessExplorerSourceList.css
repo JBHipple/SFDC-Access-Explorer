@@ -1,0 +1,34 @@
+.loading {
+  min-height: 3rem;
+}
+
+.source-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.source-link {
+  font-weight: 600;
+}
+
+.source-badge_Profile {
+  background: var(--slds-g-color-palette-blue-95, #e5f4ff);
+}
+
+.source-badge_PermissionSet {
+  background: var(--slds-g-color-palette-green-95, #ebf7e6);
+}
+
+.source-badge_PermissionSetGroup {
+  background: var(--slds-g-color-palette-purple-95, #f1edfd);
+}
+
+.details dt {
+  padding-right: 0.25rem;
+}
+
+.details dd {
+  padding-right: 1rem;
+}

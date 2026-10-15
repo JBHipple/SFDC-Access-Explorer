@@ -1,0 +1,18 @@
+[
+  {
+    "entityType": "FIELD",
+    "key": "Account.Industry",
+    "label": "Industry",
+    "apiName": "Industry",
+    "summary": "Read, Edit",
+    "hasChildren": false
+  },
+  {
+    "entityType": "FIELD",
+    "key": "Account.Rating",
+    "label": "Rating",
+    "apiName": "Rating",
+    "summary": "Read",
+    "hasChildren": false
+  }
+]

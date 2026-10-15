@@ -1,58 +1,65 @@
-# Salesforce DX Project
+# Access Explorer
 
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
+An installable Salesforce package that shows admins **who can access what, and why**. Access comes from a user's profile, permission sets and permission set groups. Access Explorer reads those grants (`PermissionSetAssignment`, `ObjectPermissions`, `FieldPermissions`, `SetupEntityAccess`, `PermissionSetTabSetting` and the system permission fields on `PermissionSet`) and presents them in two tabs:
 
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
+- **By User**: pick a user, then browse everything they can access. That covers objects (expand an object to see its fields), system permissions, Apex classes, Visualforce pages, custom permissions, tabs, apps, connected apps, flows, and custom metadata types and settings. Select an item to see which profile, permission sets or groups grant it.
+- **By Entity**: pick an object, field, permission or setup entity to see every active user with access. Select a user to see where their access comes from.
 
-## Prerequisites
+Each granting source links to its Setup page, which opens in a new window. Permission set groups list the component permission sets that contribute to the access. Access implied by broader permissions (View All Data, Modify All Data, View All Fields) is called out separately.
 
-Before you start, make sure you have:
+## Using it
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub.  See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+1. Deploy the source and assign the **Access Explorer User** permission set. It grants the custom permission, View Setup and Configuration, Apex class access, and the app and tab.
+2. Open the **Access Explorer** app or tab. The `accessExplorer` component can also be added to any App or Home page in Lightning App Builder.
 
-## Project Structure
+## Architecture
 
-Your DX project follows this structure:
+| Layer                              | Classes                                                                                       |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| Controllers (`with sharing`, thin) | `AccessExplorerUserController`, `AccessExplorerEntityController`                              |
+| Services                           | `AccessGrantService` (core grant logic), `SystemPermissionService`, `SetupEntityNameResolver` |
+| Data access                        | `IAccessExplorerSelector` / `AccessExplorerSelector`                                          |
+| Query building                     | `AccessExplorerQueryBuilder`                                                                  |
+| Support                            | `AccessExplorerSecurity`, `AccessExplorerModels`, `AccessExplorerSchemaUtil`                  |
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+Services take an `IAccessExplorerSelector` through their constructor. Unit tests inject `AccessExplorerSelectorStub`, and integration tests use the real selector.
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+LWC components: `accessExplorer` (the exposed container) → `accessExplorerUserView` / `accessExplorerEntityView`. These are built from `accessExplorerSearchList` (a reusable listbox), `accessExplorerEntityList`, `accessExplorerEntityPicker` and `accessExplorerSourceList`. Shared helpers live in `accessExplorerUtils`.
 
-## Get Started
+## Security model (AppExchange review)
 
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
+- There are no SOQL string literals in production code. Every query goes through `AccessExplorerQueryBuilder`:
+  - Object and field names, including relationship paths, are validated against the schema describe.
+  - Every value is passed as a bind variable to `Database.queryWithBinds`.
+  - Queries run in `AccessLevel.USER_MODE`.
+  - A capped `LIMIT` is always applied.
+- Every `@AuraEnabled` method checks `AccessExplorerSecurity.assertCanUse()` first. It requires the `Access_Explorer_User` custom permission and View Setup.
+- Client input is validated against allow-lists: entity types against the enum, system permission names against the describe, and object and field names against the schema. Search terms are trimmed and capped in length.
+- Errors reach the client as `AuraHandledException` with safe messages only. Internal details are never passed through.
+- Classes declare their sharing, and there is no `without sharing` and no `global`. The UI builds links only from validated Salesforce Ids and never uses `innerHTML`.
 
-## Common Salesforce CLI Commands
+## Development
 
-Here are common CLI commands that you'll use the most:
+```bash
+npm install
+npm run lint                 # ESLint (LWC)
+npm run test:unit:coverage   # Jest
+npm run scan                 # Salesforce Code Analyzer (AppExchange + Recommended rules)
+sf project deploy start -o <org>
+sf apex run test -o <org> -l RunLocalTests --code-coverage -r human -w 20
+```
 
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
+### Packaging
 
-## Use Agentforce Vibes to Build Lightning Apps
+`sfdx-project.json` already declares the `AccessExplorer` package directory. To build a managed 2GP:
 
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
+1. Register a namespace and link it to your Dev Hub.
+2. Set `namespace` in `sfdx-project.json`.
+3. Run `sf package create --name AccessExplorer --package-type Managed --path force-app`.
 
-## Additional Resources
+The code doesn't hard-code a namespace anywhere.
 
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
+### Known limitations
 
+- Flows granted through `SetupEntityAccess` are referenced by FlowDefinition Ids (`300…`), which only the Tooling API can resolve. Flows whose name can't be resolved show their Id with "(name unavailable)". The same applies to any app missing from `AppMenuItem`.
+- Each "By Entity" user list shows at most 500 active users. A notice appears when the list is truncated, and the search box narrows it.

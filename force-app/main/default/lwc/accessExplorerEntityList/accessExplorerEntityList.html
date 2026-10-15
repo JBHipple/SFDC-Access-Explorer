@@ -1,0 +1,158 @@
+<template>
+  <lightning-input
+    type="search"
+    label="Filter accessible items"
+    placeholder="Filter by name or API name"
+    value={filterTerm}
+    onchange={handleFilterChange}
+    data-id="filter-input"
+  ></lightning-input>
+
+  <template lwc:if={hasGroups}>
+    <div class="groups slds-m-top_small">
+      <template for:each={groupsView} for:item="group">
+        <section
+          key={group.entityType}
+          class="group"
+          data-type={group.entityType}
+        >
+          <h3 class="slds-text-heading_small">
+            <button
+              class="slds-button group-toggle"
+              aria-expanded={group.ariaExpanded}
+              aria-controls={group.contentId}
+              data-type={group.entityType}
+              onclick={handleGroupToggle}
+            >
+              <lightning-icon
+                icon-name={group.chevron}
+                size="xx-small"
+                class="slds-m-right_x-small"
+              ></lightning-icon>
+              <lightning-icon
+                icon-name={group.iconName}
+                size="x-small"
+                class="slds-m-right_x-small"
+              ></lightning-icon>
+              <span>{group.label}</span>
+              <span class="slds-badge slds-m-left_x-small group-count"
+                >{group.count}</span
+              >
+            </button>
+          </h3>
+          <template lwc:if={group.isExpanded}>
+            <div id={group.contentId} class="group-content">
+              <template lwc:if={group.isEmpty}>
+                <p
+                  class="slds-p-around_x-small slds-text-color_weak empty-group"
+                >
+                  No access.
+                </p>
+              </template>
+              <ul class="entity-items">
+                <template for:each={group.items} for:item="item">
+                  <li key={item.key} class="entity-item">
+                    <div class="entity-row">
+                      <template lwc:if={item.isExpandable}>
+                        <button
+                          class="slds-button slds-button_icon object-toggle"
+                          aria-expanded={item.ariaExpanded}
+                          aria-controls={item.fieldsId}
+                          aria-label={item.toggleLabel}
+                          title={item.toggleLabel}
+                          data-key={item.key}
+                          onclick={handleObjectToggle}
+                        >
+                          <lightning-icon
+                            icon-name={item.chevron}
+                            size="xx-small"
+                          ></lightning-icon>
+                        </button>
+                      </template>
+                      <button
+                        class={item.buttonClass}
+                        aria-current={item.ariaCurrent}
+                        data-type={item.entityType}
+                        data-key={item.key}
+                        data-label={item.label}
+                        onclick={handleSelect}
+                      >
+                        <span
+                          class="slds-truncate entity-label"
+                          title={item.apiName}
+                          >{item.label}</span
+                        >
+                        <template lwc:if={item.summary}>
+                          <span
+                            class="slds-truncate slds-text-body_small slds-text-color_weak entity-summary"
+                            >{item.summary}</span
+                          >
+                        </template>
+                      </button>
+                    </div>
+                    <template lwc:if={item.isExpanded}>
+                      <div id={item.fieldsId} class="fields">
+                        <template lwc:if={item.fieldsLoading}>
+                          <div class="slds-is-relative fields-loading">
+                            <lightning-spinner
+                              alternative-text="Loading fields"
+                              size="x-small"
+                            ></lightning-spinner>
+                          </div>
+                        </template>
+                        <template lwc:if={item.fieldsError}>
+                          <p
+                            class="slds-text-color_error fields-error"
+                            role="alert"
+                          >
+                            {item.fieldsError}
+                          </p>
+                        </template>
+                        <template lwc:if={item.fieldsEmpty}>
+                          <p
+                            class="slds-text-color_weak slds-p-left_small fields-empty"
+                          >
+                            No field access.
+                          </p>
+                        </template>
+                        <ul aria-label={item.toggleLabel}>
+                          <template for:each={item.fields} for:item="field">
+                            <li key={field.key}>
+                              <button
+                                class={field.buttonClass}
+                                aria-current={field.ariaCurrent}
+                                data-type="FIELD"
+                                data-key={field.key}
+                                data-label={field.label}
+                                onclick={handleSelect}
+                              >
+                                <span
+                                  class="slds-truncate entity-label"
+                                  title={field.apiName}
+                                  >{field.label}</span
+                                >
+                                <span
+                                  class="slds-truncate slds-text-body_small slds-text-color_weak entity-summary"
+                                  >{field.summary}</span
+                                >
+                              </button>
+                            </li>
+                          </template>
+                        </ul>
+                      </div>
+                    </template>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </template>
+        </section>
+      </template>
+    </div>
+  </template>
+  <template lwc:else>
+    <p class="slds-p-around_small slds-text-color_weak no-groups">
+      No accessible items to show.
+    </p>
+  </template>
+</template>

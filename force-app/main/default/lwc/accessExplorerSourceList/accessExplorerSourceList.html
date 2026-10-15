@@ -1,0 +1,113 @@
+<template>
+  <template lwc:if={hasSelection}>
+    <h3 class="slds-text-heading_small slds-m-bottom_x-small heading">
+      {heading}
+    </h3>
+    <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+      {entityTypeLabel}: {entityKey}
+    </p>
+    <div aria-live="polite" class="slds-is-relative">
+      <template lwc:if={isLoading}>
+        <div class="loading">
+          <lightning-spinner
+            alternative-text="Loading access sources"
+            size="small"
+          ></lightning-spinner>
+        </div>
+      </template>
+      <template lwc:if={error}>
+        <div
+          class="slds-notify slds-notify_alert slds-alert_error error"
+          role="alert"
+        >
+          {error}
+        </div>
+      </template>
+      <template lwc:if={isEmpty}>
+        <p class="slds-text-color_weak empty-message">
+          No profile, permission set or permission set group grants this access.
+        </p>
+      </template>
+    </div>
+    <template lwc:if={hasSources}>
+      <ul
+        class="slds-has-dividers_bottom-space sources"
+        aria-label="Access sources"
+      >
+        <template for:each={sourceViews} for:item="source">
+          <li key={source.key} class="slds-item source">
+            <div class="source-header">
+              <span class={source.badgeClass}>{source.typeLabel}</span>
+              <template lwc:if={source.url}>
+                <a
+                  class="source-link"
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={source.linkTitle}
+                >
+                  {source.name}
+                  <lightning-icon
+                    icon-name="utility:new_window"
+                    size="xx-small"
+                    class="slds-m-left_xx-small"
+                  ></lightning-icon>
+                  <span class="slds-assistive-text"
+                    >(opens in a new window)</span
+                  >
+                </a>
+              </template>
+              <template lwc:else>
+                <span class="source-name">{source.name}</span>
+              </template>
+            </div>
+            <dl
+              class="slds-list_horizontal slds-wrap slds-text-body_small slds-m-top_xx-small details"
+            >
+              <dt class="slds-item_label slds-text-color_weak">Grants:</dt>
+              <dd class="slds-item_detail granted">{source.grantedText}</dd>
+              <template lwc:if={source.isImplied}>
+                <dt class="slds-item_label slds-text-color_weak">
+                  Implied by:
+                </dt>
+                <dd class="slds-item_detail implied">
+                  {source.impliedBy} permission
+                </dd>
+              </template>
+              <template lwc:if={source.hasVia}>
+                <dt class="slds-item_label slds-text-color_weak">Via:</dt>
+                <dd class="slds-item_detail via">{source.viaText}</dd>
+              </template>
+            </dl>
+            <template lwc:if={source.isSessionBased}>
+              <p class="slds-text-body_small slds-text-color_weak session-note">
+                <lightning-icon
+                  icon-name="utility:clock"
+                  size="xx-small"
+                  class="slds-m-right_xx-small"
+                ></lightning-icon>
+                Session-based: applies only while activated in the user's
+                session.
+              </p>
+            </template>
+          </li>
+        </template>
+      </ul>
+    </template>
+  </template>
+  <template lwc:else>
+    <div
+      class="slds-text-align_center slds-p-around_large slds-text-color_weak placeholder"
+    >
+      <lightning-icon
+        icon-name="utility:info"
+        size="small"
+        class="slds-m-bottom_x-small"
+      ></lightning-icon>
+      <p>
+        Select an item to see which profile, permission sets or groups grant the
+        access.
+      </p>
+    </div>
+  </template>
+</template>

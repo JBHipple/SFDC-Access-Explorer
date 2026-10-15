@@ -1,0 +1,89 @@
+<template>
+  <div class="slds-p-around_medium">
+    <c-access-explorer-search-list
+      label="Search users"
+      placeholder="Search by name, username or email"
+      items={userItems}
+      selected-id={selectedUserId}
+      loading={usersLoading}
+      truncated={usersTruncated}
+      empty-message="No active users match your search."
+      onsearch={handleUserSearch}
+      onselect={handleUserSelect}
+    ></c-access-explorer-search-list>
+    <template lwc:if={usersError}>
+      <div
+        class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small users-error"
+        role="alert"
+      >
+        {usersError}
+      </div>
+    </template>
+
+    <template lwc:if={selectedUser}>
+      <h2
+        class="slds-text-heading_medium slds-m-top_large slds-m-bottom_small selected-user-heading"
+      >
+        Access for {selectedUser.name}
+      </h2>
+      <lightning-layout multiple-rows>
+        <lightning-layout-item
+          size="12"
+          medium-device-size="6"
+          padding="around-small"
+        >
+          <div
+            class="slds-box slds-theme_default panel"
+            role="region"
+            aria-label="Accessible items"
+          >
+            <template lwc:if={entitiesLoading}>
+              <div class="slds-is-relative loading">
+                <lightning-spinner
+                  alternative-text="Loading accessible items"
+                  size="small"
+                ></lightning-spinner>
+              </div>
+            </template>
+            <template lwc:if={entitiesError}>
+              <div
+                class="slds-notify slds-notify_alert slds-alert_error entities-error"
+                role="alert"
+              >
+                {entitiesError}
+              </div>
+            </template>
+            <template lwc:if={entityGroups}>
+              <c-access-explorer-entity-list
+                groups={entityGroups}
+                user-id={selectedUserId}
+                selected-type={selectedEntityType}
+                selected-key={selectedEntityKey}
+                onentityselect={handleEntitySelect}
+              ></c-access-explorer-entity-list>
+            </template>
+          </div>
+        </lightning-layout-item>
+        <lightning-layout-item
+          size="12"
+          medium-device-size="6"
+          padding="around-small"
+        >
+          <div
+            class="slds-box slds-theme_default panel"
+            role="region"
+            aria-label="Access sources"
+          >
+            <c-access-explorer-source-list
+              user-id={selectedUserId}
+              user-name={selectedUserName}
+              entity-type={selectedEntityType}
+              entity-key={selectedEntityKey}
+              entity-label={selectedEntityLabel}
+            ></c-access-explorer-source-list>
+          </div>
+        </lightning-layout-item>
+      </lightning-layout>
+    </template>
+  </div>
+</template>

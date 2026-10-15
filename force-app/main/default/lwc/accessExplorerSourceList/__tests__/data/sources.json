@@ -1,0 +1,38 @@
+[
+  {
+    "sourceType": "Profile",
+    "recordId": "00e000000000001AAA",
+    "name": "Standard User",
+    "grantedPermissions": ["Read", "Edit"],
+    "viaComponents": [],
+    "isSessionBased": false,
+    "impliedBy": null
+  },
+  {
+    "sourceType": "PermissionSetGroup",
+    "recordId": "0PG000000000001AAA",
+    "name": "Support Bundle",
+    "grantedPermissions": ["Read"],
+    "viaComponents": ["Case Access", "Service Basics"],
+    "isSessionBased": false,
+    "impliedBy": null
+  },
+  {
+    "sourceType": "PermissionSet",
+    "recordId": "0PS000000000001AAA",
+    "name": "Sales Extras",
+    "grantedPermissions": ["Read", "View All Records"],
+    "viaComponents": [],
+    "isSessionBased": true,
+    "impliedBy": "View All Data"
+  },
+  {
+    "sourceType": "Unknown",
+    "recordId": "not-an-id",
+    "name": "Mystery Source",
+    "grantedPermissions": [],
+    "viaComponents": null,
+    "isSessionBased": false,
+    "impliedBy": null
+  }
+]

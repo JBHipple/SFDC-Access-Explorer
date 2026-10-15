@@ -1,0 +1,65 @@
+<template>
+  <div class="search-list">
+    <lightning-input
+      type="search"
+      label={label}
+      placeholder={placeholder}
+      value={searchTerm}
+      onchange={handleSearchChange}
+      data-id="search-input"
+    ></lightning-input>
+    <div class="list-container slds-m-top_x-small">
+      <template lwc:if={loading}>
+        <lightning-spinner
+          alternative-text="Loading"
+          size="small"
+        ></lightning-spinner>
+      </template>
+      <ul
+        class="slds-listbox slds-listbox_vertical"
+        role="listbox"
+        aria-label={label}
+        aria-busy={ariaBusy}
+        onkeydown={handleKeyDown}
+      >
+        <template for:each={viewItems} for:item="item">
+          <li
+            key={item.id}
+            class={item.className}
+            role="option"
+            tabindex={item.tabIndex}
+            aria-selected={item.ariaSelected}
+            data-id={item.id}
+            data-index={item.index}
+            onclick={handleItemClick}
+          >
+            <span class="slds-truncate option-label" title={item.label}
+              >{item.label}</span
+            >
+            <template lwc:if={item.description}>
+              <span
+                class="slds-truncate slds-text-body_small slds-text-color_weak option-description"
+                title={item.description}
+                >{item.description}</span
+              >
+            </template>
+          </li>
+        </template>
+      </ul>
+    </div>
+    <div aria-live="polite" class="status">
+      <template lwc:if={showEmpty}>
+        <p class="slds-p-around_x-small slds-text-color_weak empty-message">
+          {emptyMessage}
+        </p>
+      </template>
+      <template lwc:if={truncated}>
+        <p
+          class="slds-p-around_x-small slds-text-body_small slds-text-color_weak truncated-message"
+        >
+          {truncatedMessage}
+        </p>
+      </template>
+    </div>
+  </div>
+</template>
