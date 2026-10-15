@@ -3,5 +3,5 @@
  * Sized to the window so the page itself rarely needs to scroll.
  */
 :host {
-  --ae-pane-height: max(26rem, calc(100vh - 15rem));
+  --ae-pane-height: max(26rem, calc(100vh - 11rem));
 }
