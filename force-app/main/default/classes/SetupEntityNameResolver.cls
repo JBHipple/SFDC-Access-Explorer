@@ -21,6 +21,15 @@ public inherited sharing class SetupEntityNameResolver {
     TabDefinition.SObjectType
   };
 
+  /**
+   * Types whose unresolvable keys are left out of resolve() results. Every profile
+   * carries access rows for internal Salesforce apps that no API names and no user can
+   * open; AppMenuItem lists every app in the org, so an app missing from it is unusable.
+   */
+  private static final Set<AccessExplorerModels.EntityType> OMIT_UNRESOLVED_TYPES = new Set<AccessExplorerModels.EntityType>{
+    AccessExplorerModels.EntityType.APP
+  };
+
   private final IAccessExplorerSelector selector;
 
   /** Describes how one entity type maps onto its lookup object. */
@@ -135,7 +144,8 @@ public inherited sharing class SetupEntityNameResolver {
 
   /**
    * @return entity items keyed by the requested key. Keys that cannot be resolved
-   *         (e.g. deleted or hidden metadata) fall back to the key as the label.
+   *         (e.g. deleted or hidden metadata) fall back to the key as the label,
+   *         except unusable apps, which are omitted (see OMIT_UNRESOLVED_TYPES).
    */
   public Map<String, AccessExplorerModels.EntityItem> resolve(
     AccessExplorerModels.EntityType entityType,
@@ -144,6 +154,7 @@ public inherited sharing class SetupEntityNameResolver {
     Map<String, AccessExplorerModels.EntityItem> result = new Map<String, AccessExplorerModels.EntityItem>();
     LookupConfig config = getConfig(entityType);
     List<SObject> records = new List<SObject>();
+    Boolean lookupSucceeded = true;
     try {
       records = selector.getRecordsByKeys(
         config.objectType,
@@ -155,6 +166,7 @@ public inherited sharing class SetupEntityNameResolver {
       // Some lookup objects are unavailable in certain editions or to some users;
       // fall back to showing raw keys rather than failing the whole request.
       records = new List<SObject>();
+      lookupSucceeded = false;
     }
     for (SObject record : records) {
       AccessExplorerModels.EntityItem item = toItem(entityType, config, record);
@@ -163,6 +175,13 @@ public inherited sharing class SetupEntityNameResolver {
     Map<String, AccessExplorerModels.EntityItem> byRequestedKey = new Map<String, AccessExplorerModels.EntityItem>();
     for (String key : keys) {
       AccessExplorerModels.EntityItem item = result.get(normalizeKey(key));
+      if (
+        item == null &&
+        lookupSucceeded &&
+        OMIT_UNRESOLVED_TYPES.contains(entityType)
+      ) {
+        continue;
+      }
       byRequestedKey.put(
         key,
         item != null

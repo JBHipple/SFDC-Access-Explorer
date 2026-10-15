@@ -44,6 +44,51 @@ private class SetupEntityNameResolverTest {
   }
 
   @IsTest
+  static void omitsAppsThatCannotBeResolved() {
+    AccessExplorerSelectorStub stub = new AccessExplorerSelectorStub();
+    Id appId = AccessExplorerTestDataFactory.fakeId('02u');
+    Id hiddenAppId = AccessExplorerTestDataFactory.fakeId('02u');
+    stub.lookupRecords.put(
+      AppMenuItem.SObjectType,
+      new List<SObject>{
+        AccessExplorerTestDataFactory.build(
+          AppMenuItem.SObjectType,
+          new Map<String, Object>{
+            'ApplicationId' => appId,
+            'Label' => 'Sales',
+            'Name' => 'Sales'
+          }
+        )
+      }
+    );
+
+    Map<String, AccessExplorerModels.EntityItem> resolved = new SetupEntityNameResolver(
+        stub
+      )
+      .resolve(
+        AccessExplorerModels.EntityType.APP,
+        new Set<String>{ appId, hiddenAppId }
+      );
+
+    Assert.areEqual(1, resolved.size(), 'Unnamed internal apps are omitted');
+    Assert.areEqual('Sales', resolved.get(appId).label);
+  }
+
+  @IsTest
+  static void keepsAppsByIdWhenTheAppLookupFails() {
+    AccessExplorerSelectorStub stub = new AccessExplorerSelectorStub();
+    stub.lookupError = new QueryException('not supported');
+    Id appId = AccessExplorerTestDataFactory.fakeId('02u');
+
+    Map<String, AccessExplorerModels.EntityItem> resolved = new SetupEntityNameResolver(
+        stub
+      )
+      .resolve(AccessExplorerModels.EntityType.APP, new Set<String>{ appId });
+
+    Assert.areEqual(appId, resolved.get(appId).label);
+  }
+
+  @IsTest
   static void searchesWithTypeSpecificFilters() {
     AccessExplorerSelectorStub stub = new AccessExplorerSelectorStub();
     Id appId = AccessExplorerTestDataFactory.fakeId('02u');

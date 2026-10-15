@@ -76,5 +76,6 @@ The code doesn't hard-code a namespace anywhere.
 
 ### Known limitations
 
-- Flows granted through `SetupEntityAccess` are referenced by FlowDefinition Ids (`300…`), which only the Tooling API can resolve. Flows whose name can't be resolved are listed by their Id. The same applies to any app missing from `AppMenuItem`.
+- Flows granted through `SetupEntityAccess` are referenced by FlowDefinition Ids (`300…`), which only the Tooling API can resolve. Flows whose name can't be resolved are listed by their Id.
+- Every profile carries access rows for internal Salesforce apps that no API names and no user can open. Apps missing from `AppMenuItem` (which lists every app in the org) are therefore left out of the Apps list. If the `AppMenuItem` lookup itself fails, apps are shown by Id instead.
 - Each "By Entity" user list shows at most 500 active users. A notice appears when the list is truncated, and the search box narrows it.
