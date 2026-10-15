@@ -1,7 +1,7 @@
 /*
- * Height shared by the three panes in each view (inherited through shadow DOM).
- * Sized to the window so the page itself rarely needs to scroll.
+ * The pane height (--ae-pane-height) is set on the host from JavaScript so the card
+ * ends at the bottom of the viewport; see fitToViewport().
  */
 :host {
-  --ae-pane-height: max(26rem, calc(100vh - 11rem));
+  display: block;
 }

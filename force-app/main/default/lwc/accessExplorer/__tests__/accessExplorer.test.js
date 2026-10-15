@@ -186,6 +186,88 @@ describe("c-access-explorer", () => {
     expect($(element, "lightning-tabset").activeTabValue).toBe("entity");
   });
 
+  describe("viewport fitting", () => {
+    let observed;
+    let disconnect;
+    let wide;
+
+    beforeEach(() => {
+      observed = [];
+      disconnect = jest.fn();
+      wide = true;
+      window.ResizeObserver = jest.fn((callback) => ({
+        observe: (target) => observed.push({ target, callback }),
+        disconnect
+      }));
+      window.matchMedia = jest.fn(() => ({ matches: wide }));
+      Object.defineProperty(window, "innerHeight", {
+        value: 900,
+        configurable: true
+      });
+    });
+
+    afterEach(() => {
+      delete window.ResizeObserver;
+      delete window.matchMedia;
+    });
+
+    function paneHeight(element) {
+      return element.style.getPropertyValue("--ae-pane-height");
+    }
+
+    function mockCardBottom(element, bottom) {
+      element.getBoundingClientRect = () => ({ height: 500, bottom });
+    }
+
+    it("starts from an estimate and shrinks the panes when the card overshoots", async () => {
+      const element = await createExplorer();
+      expect(paneHeight(element)).toBe("724px");
+
+      mockCardBottom(element, 1000);
+      observed[0].callback();
+      // Card must end at 900 - 12; it overshoots by 112.
+      expect(paneHeight(element)).toBe("612px");
+      expect(observed[0].target).toBe(element);
+    });
+
+    it("grows the panes when the card stops short and never goes below the minimum", async () => {
+      const element = await createExplorer();
+      mockCardBottom(element, 788);
+      window.dispatchEvent(new CustomEvent("resize"));
+      expect(paneHeight(element)).toBe("824px");
+
+      mockCardBottom(element, 5000);
+      window.dispatchEvent(new CustomEvent("resize"));
+      expect(paneHeight(element)).toBe("416px");
+    });
+
+    it("leaves the height alone when hidden, stacked, or already fitted", async () => {
+      const element = await createExplorer();
+      element.getBoundingClientRect = () => ({ height: 0, bottom: 0 });
+      window.dispatchEvent(new CustomEvent("resize"));
+      expect(paneHeight(element)).toBe("724px");
+
+      wide = false;
+      mockCardBottom(element, 2000);
+      window.dispatchEvent(new CustomEvent("resize"));
+      expect(paneHeight(element)).toBe("724px");
+
+      wide = true;
+      mockCardBottom(element, 888);
+      window.dispatchEvent(new CustomEvent("resize"));
+      expect(paneHeight(element)).toBe("724px");
+    });
+
+    it("stops listening when removed", async () => {
+      const element = await createExplorer();
+      document.body.removeChild(element);
+      expect(disconnect).toHaveBeenCalled();
+      mockCardBottom(element, 1000);
+      window.dispatchEvent(new CustomEvent("resize"));
+      expect(paneHeight(element)).toBe("724px");
+    });
+  });
+
   it("refreshes the active view", async () => {
     const element = await createExplorer();
     const userView = $(element, "c-access-explorer-user-view");
