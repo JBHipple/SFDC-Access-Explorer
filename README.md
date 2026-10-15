@@ -17,7 +17,7 @@ Each granting source links to its Setup page, which opens in a new window. Permi
 Other features:
 
 - **Cross-links:** go from an item to everyone who has it, or from a user in the By Entity tab to all of their access.
-- **Shareable state:** the tab and selections are kept in the URL (`c__` parameters), so links can be shared and the browser's Back button works.
+- **Fresh on reload:** the tab and selections are held in memory only, so reloading the page starts with nothing selected. Cross-links between tabs carry the current selection across.
 - **Refresh:** the refresh button in the header reloads data after you change permissions in Setup.
 - **Export and copy:** lists export to CSV, and the access sources can be copied as plain text for a ticket or email.
 
