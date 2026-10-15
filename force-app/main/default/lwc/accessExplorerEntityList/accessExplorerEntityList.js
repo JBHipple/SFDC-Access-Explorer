@@ -1,34 +1,20 @@
-import { LightningElement, api } from "lwc";
+import { api, LightningElement } from "lwc";
 import getUserFields from "@salesforce/apex/AccessExplorerUserController.getUserFields";
 import { errorText } from "c/accessExplorerUtils";
 
-const GROUP_ICONS = {
-  SOBJECT_TYPE: "utility:database",
-  SYSTEM_PERMISSION: "utility:shield",
-  APEX_CLASS: "utility:apex",
-  APEX_PAGE: "utility:page",
-  CUSTOM_PERMISSION: "utility:lock",
-  TAB: "utility:tabset",
-  APP: "utility:apps",
-  CONNECTED_APP: "utility:connected_apps",
-  FLOW: "utility:flow",
-  CUSTOM_METADATA: "utility:settings"
-};
-
 /**
- * Grouped, filterable list of everything a user can access. Groups and objects are
- * collapsible; an object's fields are loaded on first expand.
+ * Flat list of the entities a user can access within one category. Object rows can be
+ * expanded to show the object's fields, which are loaded on first expand.
  *
  * Events:
  *  - entityselect: detail { entityType, key, label }
  */
 export default class AccessExplorerEntityList extends LightningElement {
-  @api groups = [];
+  @api items = [];
   @api selectedType;
   @api selectedKey;
+  @api emptyMessage = "No access.";
 
-  filterTerm = "";
-  expandedGroups = new Set(["SOBJECT_TYPE"]);
   expandedObjects = new Set();
   fieldsByObject = {};
   _userId;
@@ -45,61 +31,35 @@ export default class AccessExplorerEntityList extends LightningElement {
     this._userId = value;
   }
 
-  get isFiltering() {
-    return this.filterTerm.length > 0;
+  /** Discards cached fields and reloads any expanded objects. */
+  @api
+  refresh() {
+    this.fieldsByObject = {};
+    this.expandedObjects.forEach((objectName) => this.loadFields(objectName));
   }
 
-  get hasGroups() {
-    return (this.groups || []).length > 0;
+  get hasItems() {
+    return (this.items || []).length > 0;
   }
 
-  get groupsView() {
-    const term = this.filterTerm.toLowerCase();
-    return (this.groups || []).map((group) => {
-      const items = (group.items || [])
-        .filter((item) => this.matches(item, term))
-        .map((item) => this.toItemView(group.entityType, item));
-      // While filtering, open every group so matches are visible.
-      const isExpanded =
-        this.isFiltering || this.expandedGroups.has(group.entityType);
-      return {
-        entityType: group.entityType,
-        label: group.label,
-        count: items.length,
-        iconName: GROUP_ICONS[group.entityType] || "utility:list",
-        isExpanded,
-        ariaExpanded: String(isExpanded),
-        chevron: isExpanded ? "utility:chevrondown" : "utility:chevronright",
-        contentId: `group-${group.entityType}`,
-        isEmpty: items.length === 0,
-        items
-      };
-    });
+  get itemViews() {
+    return (this.items || []).map((item) => this.toItemView(item));
   }
 
-  matches(item, term) {
-    if (!term) {
-      return true;
-    }
-    return (
-      (item.label || "").toLowerCase().includes(term) ||
-      (item.apiName || "").toLowerCase().includes(term)
-    );
-  }
-
-  toItemView(entityType, item) {
+  toItemView(item) {
     const isSelected =
-      entityType === this.selectedType && item.key === this.selectedKey;
-    const isExpandable = entityType === "SOBJECT_TYPE" && item.hasChildren;
+      item.entityType === this.selectedType && item.key === this.selectedKey;
+    const isExpandable =
+      item.entityType === "SOBJECT_TYPE" && !!item.hasChildren;
     const isExpanded = isExpandable && this.expandedObjects.has(item.key);
     const fieldState = this.fieldsByObject[item.key] || {};
+    const showApiName = !!item.apiName && item.apiName !== item.label;
     return {
       ...item,
-      entityType,
       isSelected,
       ariaCurrent: isSelected ? "true" : "false",
-      buttonClass:
-        "slds-button entity-button" + (isSelected ? " is-selected" : ""),
+      rowClass: "row" + (isSelected ? " is-selected" : ""),
+      showApiName,
       isExpandable,
       isExpanded,
       ariaExpanded: String(isExpanded),
@@ -112,25 +72,8 @@ export default class AccessExplorerEntityList extends LightningElement {
         !fieldState.loading &&
         !fieldState.error &&
         (fieldState.items || []).length === 0,
-      fields: (fieldState.items || []).map((field) =>
-        this.toItemView("FIELD", field)
-      )
+      fields: (fieldState.items || []).map((field) => this.toItemView(field))
     };
-  }
-
-  handleFilterChange(event) {
-    this.filterTerm = (event.target.value || "").trim();
-  }
-
-  handleGroupToggle(event) {
-    const entityType = event.currentTarget.dataset.type;
-    const expanded = new Set(this.expandedGroups);
-    if (expanded.has(entityType)) {
-      expanded.delete(entityType);
-    } else {
-      expanded.add(entityType);
-    }
-    this.expandedGroups = expanded;
   }
 
   handleObjectToggle(event) {

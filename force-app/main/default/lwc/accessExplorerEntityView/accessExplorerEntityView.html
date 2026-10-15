@@ -1,30 +1,43 @@
 <template>
-  <div class="slds-p-around_medium">
-    <c-access-explorer-entity-picker
-      selected-key={selectedEntityKey}
-      onentityselect={handleEntitySelect}
-    ></c-access-explorer-entity-picker>
+  <div class="view">
+    <div class="panes">
+      <section class="pane" aria-label="Choose an entity">
+        <div class="pane-body pane-body_fill">
+          <c-access-explorer-entity-picker
+            selected-type={selectedType}
+            selected-key={selectedKey}
+            onentityselect={handleEntitySelect}
+          ></c-access-explorer-entity-picker>
+        </div>
+      </section>
 
-    <template lwc:if={hasEntity}>
-      <h2
-        class="slds-text-heading_medium slds-m-top_large slds-m-bottom_small entity-heading"
-      >
-        {entityHeading}
-      </h2>
-      <lightning-layout multiple-rows>
-        <lightning-layout-item
-          size="12"
-          medium-device-size="6"
-          padding="around-small"
-        >
-          <div
-            class="slds-box slds-theme_default panel"
-            role="region"
-            aria-label="Users with access"
-          >
+      <section class="pane" aria-label="Users with access">
+        <template lwc:if={hasEntity}>
+          <div class="pane-header">
+            <h3 class="slds-text-title_caps pane-title users-heading">
+              {usersHeading}
+            </h3>
+            <lightning-button-icon
+              class="export"
+              icon-name="utility:download"
+              variant="border-filled"
+              size="small"
+              alternative-text="Export users to CSV"
+              title="Export users to CSV"
+              disabled={exportDisabled}
+              onclick={handleExport}
+            ></lightning-button-icon>
+          </div>
+          <p class="entity-subject slds-truncate" title={selectedKey}>
+            {entityTypeLabel}: {selectedLabel}
+          </p>
+          <div class="pane-body pane-body_fill">
             <c-access-explorer-search-list
+              class="user-list"
               label="Filter users with access"
               placeholder="Search by name or username"
+              hide-label
+              fill
               items={userItems}
               selected-id={selectedUserId}
               loading={usersLoading}
@@ -35,34 +48,49 @@
             ></c-access-explorer-search-list>
             <template lwc:if={usersError}>
               <div
-                class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small users-error"
+                class="slds-notify slds-notify_alert slds-alert_error users-error"
                 role="alert"
               >
                 {usersError}
               </div>
             </template>
           </div>
-        </lightning-layout-item>
-        <lightning-layout-item
-          size="12"
-          medium-device-size="6"
-          padding="around-small"
-        >
-          <div
-            class="slds-box slds-theme_default panel"
-            role="region"
-            aria-label="Access sources"
-          >
-            <c-access-explorer-source-list
-              user-id={selectedUserId}
-              user-name={selectedUserName}
-              entity-type={selectedEntityType}
-              entity-key={selectedEntityKey}
-              entity-label={selectedEntityLabel}
-            ></c-access-explorer-source-list>
+        </template>
+        <template lwc:else>
+          <div class="placeholder slds-text-color_weak">
+            <lightning-icon
+              icon-name="utility:search"
+              size="small"
+              class="slds-m-bottom_x-small"
+            ></lightning-icon>
+            <p>Choose an entity to see who can access it.</p>
           </div>
-        </lightning-layout-item>
-      </lightning-layout>
-    </template>
+        </template>
+      </section>
+
+      <section class="pane" aria-label="Access sources">
+        <div class="pane-body">
+          <c-access-explorer-source-list
+            user-id={selectedUserId}
+            user-name={selectedUserName}
+            entity-type={selectedType}
+            entity-key={selectedKey}
+            entity-label={selectedLabel}
+          >
+            <lightning-button-icon
+              slot="actions"
+              class="view-user"
+              icon-name="utility:user"
+              variant="border-filled"
+              size="small"
+              alternative-text="See everything this user can access"
+              title="See everything this user can access"
+              disabled={viewUserDisabled}
+              onclick={handleViewUser}
+            ></lightning-button-icon>
+          </c-access-explorer-source-list>
+        </div>
+      </section>
+    </div>
   </div>
 </template>

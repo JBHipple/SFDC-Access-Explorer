@@ -184,4 +184,19 @@ describe("c-access-explorer-search-list", () => {
     option.click();
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it("supports fill mode and a visually hidden label", async () => {
+    const element = createList();
+    const root = element.shadowRoot.querySelector(".search-list");
+    const input = element.shadowRoot.querySelector("lightning-input");
+    expect(root.classList).not.toContain("search-list_fill");
+    expect(input.variant).toBe("standard");
+
+    element.fill = true;
+    element.hideLabel = true;
+    await Promise.resolve();
+    expect(root.classList).toContain("search-list_fill");
+    expect(input.variant).toBe("label-hidden");
+    expect(input.label).toBe("Search users");
+  });
 });

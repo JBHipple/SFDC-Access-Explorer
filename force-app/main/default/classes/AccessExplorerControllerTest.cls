@@ -54,9 +54,8 @@ private class AccessExplorerControllerTest {
     User target = getUser('Target');
     System.runAs(getUser('Explorer')) {
       Test.startTest();
-      List<AccessExplorerModels.UserOption> users = AccessExplorerUserController.searchUsers(
-        'Test Target',
-        null
+      AccessExplorerModels.UserOption user = AccessExplorerUserController.getUser(
+        target.Id
       );
       List<AccessExplorerModels.EntityGroup> groups = AccessExplorerUserController.getUserEntities(
         target.Id
@@ -72,8 +71,9 @@ private class AccessExplorerControllerTest {
       );
       Test.stopTest();
 
-      Assert.areEqual(1, users.size());
-      Assert.areEqual(target.Id, users[0].id);
+      Assert.areEqual(target.Id, user.id);
+      Assert.areEqual('Test Target', user.name);
+      Assert.isNotNull(user.profileName);
 
       Boolean hasAccount = false;
       for (AccessExplorerModels.EntityItem item : groups[0].items) {
@@ -143,7 +143,7 @@ private class AccessExplorerControllerTest {
     System.runAs(getUser('Target')) {
       List<String> messages = new List<String>();
       try {
-        AccessExplorerUserController.searchUsers(null, 10);
+        AccessExplorerUserController.getUser(UserInfo.getUserId());
       } catch (AuraHandledException e) {
         messages.add(e.getMessage());
       }
@@ -217,15 +217,29 @@ private class AccessExplorerControllerTest {
   }
 
   @IsTest
-  static void capsUserSearchLimit() {
+  static void rejectsInvalidUserIds() {
     System.runAs(getUser('Explorer')) {
-      List<AccessExplorerModels.UserOption> users = AccessExplorerUserController.searchUsers(
-        null,
-        1
-      );
-      Assert.areEqual(1, users.size());
-      Assert.isFalse(
-        AccessExplorerUserController.searchUsers(null, 100000).isEmpty()
+      List<String> messages = new List<String>();
+      for (
+        Id invalid : new List<Id>{
+          null,
+          AccessExplorerTestDataFactory.fakeId(Account.SObjectType),
+          AccessExplorerTestDataFactory.fakeId(User.SObjectType)
+        }
+      ) {
+        try {
+          AccessExplorerUserController.getUser(invalid);
+        } catch (AuraHandledException e) {
+          messages.add(e.getMessage());
+        }
+      }
+      Assert.areEqual(
+        new List<String>{
+          'A valid user id is required.',
+          'A valid user id is required.',
+          'User not found.'
+        },
+        messages
       );
     }
   }

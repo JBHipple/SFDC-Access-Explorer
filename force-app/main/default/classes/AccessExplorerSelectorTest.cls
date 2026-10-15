@@ -145,12 +145,16 @@ private class AccessExplorerSelectorTest {
   }
 
   @IsTest
-  static void searchesActiveUsers() {
+  static void readsUsersById() {
     AccessExplorerSelector selector = new AccessExplorerSelector();
-    List<User> found = selector.searchUsers('Test Target', 10);
-    Assert.areEqual(1, found.size());
-    Assert.isTrue(selector.searchUsers('Test Inactive', 10).isEmpty());
-    Assert.isFalse(selector.searchUsers(null, 10).isEmpty());
+    User target = getUser('Target');
+    User inactive = getUser('Inactive');
+
+    List<User> found = selector.getUsers(new Set<Id>{ target.Id, inactive.Id });
+    Assert.areEqual(2, found.size(), 'Inactive users can still be inspected');
+    Assert.isNotNull(found[0].Profile.Name);
+    Assert.isTrue(selector.getUsers(new Set<Id>()).isEmpty());
+    Assert.isTrue(selector.getUsers(null).isEmpty());
   }
 
   @IsTest

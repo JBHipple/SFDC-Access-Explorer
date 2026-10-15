@@ -5,7 +5,11 @@ import {
   errorText,
   getEntityTypeLabel,
   getEntityTypePluralLabel,
-  reduceErrors
+  downloadCsv,
+  fileNamePart,
+  isSalesforceId,
+  reduceErrors,
+  toCsv
 } from "c/accessExplorerUtils";
 
 describe("c-access-explorer-utils", () => {
@@ -77,5 +81,58 @@ describe("c-access-explorer-utils", () => {
     expect(getEntityTypeLabel("UNKNOWN")).toBe("UNKNOWN");
     expect(getEntityTypePluralLabel("APEX_CLASS")).toBe("Apex Classes");
     expect(getEntityTypePluralLabel("UNKNOWN")).toBe("UNKNOWN");
+  });
+
+  describe("isSalesforceId", () => {
+    it("accepts 15 and 18 character ids only", () => {
+      expect(isSalesforceId("005000000000001")).toBe(true);
+      expect(isSalesforceId("005000000000001AAA")).toBe(true);
+      expect(isSalesforceId("005000000000001AA")).toBe(false);
+      expect(isSalesforceId("005000000000001AAA'")).toBe(false);
+      expect(isSalesforceId(undefined)).toBe(false);
+    });
+  });
+
+  describe("toCsv", () => {
+    it("quotes special characters and neutralizes formulas", () => {
+      const csv = toCsv(
+        ["Name", "Note"],
+        [
+          ["Smith, Jane", 'Says "hi"'],
+          ["=HYPERLINK(1)", "+1"],
+          ["-2", "@cmd"],
+          [null, undefined]
+        ]
+      );
+      expect(csv.split("\r\n")).toEqual([
+        "Name,Note",
+        '"Smith, Jane","Says ""hi"""',
+        "'=HYPERLINK(1),'+1",
+        "'-2,'@cmd",
+        ","
+      ]);
+    });
+  });
+
+  describe("downloadCsv", () => {
+    it("downloads the CSV through a temporary link", () => {
+      const click = jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(function captureLink() {
+          expect(this.download).toBe("report.csv");
+          expect(decodeURIComponent(this.href)).toContain("A,B\r\n1,2");
+        });
+      downloadCsv("report.csv", ["A", "B"], [[1, 2]]);
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(document.body.childElementCount).toBe(0);
+      click.mockRestore();
+    });
+  });
+
+  it("builds safe file name parts", () => {
+    expect(fileNamePart("Alice Adams / Admin")).toBe("Alice_Adams_Admin");
+    expect(fileNamePart("")).toBe("export");
+    expect(fileNamePart("///")).toBe("export");
+    expect(fileNamePart("x".repeat(100))).toHaveLength(60);
   });
 });

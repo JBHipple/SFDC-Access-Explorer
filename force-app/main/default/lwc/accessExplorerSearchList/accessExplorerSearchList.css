@@ -1,3 +1,20 @@
+/* Fill mode: the list stretches to the host's height (host must have a height). */
+:host {
+  display: block;
+}
+
+.search-list_fill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.search-list_fill .list-container {
+  flex: 1 1 auto;
+  max-height: none;
+}
+
 .list-container {
   position: relative;
   max-height: 16rem;

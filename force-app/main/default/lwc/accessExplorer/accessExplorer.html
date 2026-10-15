@@ -1,17 +1,33 @@
 <template>
   <lightning-card title="Access Explorer" icon-name="standard:portal">
-    <p
-      class="slds-p-horizontal_medium slds-text-body_small slds-text-color_weak description"
-    >
-      See what users can access and which profile, permission sets or permission
-      set groups grant it.
-    </p>
-    <lightning-tabset variant="scoped" class="slds-m-around_small">
-      <lightning-tab label="By User" value="user">
-        <c-access-explorer-user-view></c-access-explorer-user-view>
+    <lightning-button-icon
+      slot="actions"
+      class="refresh"
+      icon-name="utility:refresh"
+      variant="border-filled"
+      alternative-text="Refresh access data"
+      title="Refresh access data"
+      disabled={refreshing}
+      onclick={handleRefresh}
+    ></lightning-button-icon>
+    <lightning-tabset active-tab-value={activeTab}>
+      <lightning-tab label="By User" value="user" onactive={handleTabActive}>
+        <c-access-explorer-user-view
+          selection={userSelection}
+          onselectionchange={handleUserSelection}
+          onviewentity={handleViewEntity}
+        ></c-access-explorer-user-view>
       </lightning-tab>
-      <lightning-tab label="By Entity" value="entity">
-        <c-access-explorer-entity-view></c-access-explorer-entity-view>
+      <lightning-tab
+        label="By Entity"
+        value="entity"
+        onactive={handleTabActive}
+      >
+        <c-access-explorer-entity-view
+          selection={entitySelection}
+          onselectionchange={handleEntitySelection}
+          onviewuser={handleViewUser}
+        ></c-access-explorer-entity-view>
       </lightning-tab>
     </lightning-tabset>
   </lightning-card>

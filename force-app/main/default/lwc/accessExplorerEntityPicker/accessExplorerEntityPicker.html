@@ -1,50 +1,40 @@
 <template>
-  <lightning-layout multiple-rows vertical-align="end">
-    <lightning-layout-item
-      size="12"
-      medium-device-size="4"
-      padding="around-small"
-    >
-      <lightning-combobox
-        label="Entity type"
-        value={entityType}
-        options={typeOptions}
-        onchange={handleTypeChange}
-        data-id="type-select"
-      ></lightning-combobox>
-    </lightning-layout-item>
+  <div class="picker">
+    <lightning-combobox
+      class="type-select"
+      label="Entity type"
+      value={entityType}
+      options={typeOptions}
+      onchange={handleTypeChange}
+      data-id="type-select"
+    ></lightning-combobox>
     <template lwc:if={showFieldObject}>
-      <lightning-layout-item
-        size="12"
-        medium-device-size="8"
-        padding="around-small"
-      >
-        <lightning-pill
-          label={fieldObjectLabel}
-          onremove={handleClearObject}
-          data-id="object-pill"
-        ></lightning-pill>
-      </lightning-layout-item>
+      <lightning-pill
+        class="object-pill"
+        label={fieldObjectLabel}
+        onremove={handleClearObject}
+        data-id="object-pill"
+      ></lightning-pill>
     </template>
-    <lightning-layout-item size="12" padding="around-small">
-      <c-access-explorer-search-list
-        label={searchLabel}
-        items={resultItems}
-        selected-id={listSelectedId}
-        loading={loading}
-        truncated={truncated}
-        empty-message="Nothing matches your search."
-        onsearch={handleSearch}
-        onselect={handleSelect}
-      ></c-access-explorer-search-list>
-      <template lwc:if={error}>
-        <div
-          class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small error"
-          role="alert"
-        >
-          {error}
-        </div>
-      </template>
-    </lightning-layout-item>
-  </lightning-layout>
+    <c-access-explorer-search-list
+      class="results"
+      label={searchLabel}
+      items={resultItems}
+      selected-id={listSelectedId}
+      loading={loading}
+      truncated={truncated}
+      fill
+      empty-message="Nothing matches your search."
+      onsearch={handleSearch}
+      onselect={handleSelect}
+    ></c-access-explorer-search-list>
+    <template lwc:if={error}>
+      <div
+        class="slds-notify slds-notify_alert slds-alert_error error"
+        role="alert"
+      >
+        {error}
+      </div>
+    </template>
+  </div>
 </template>

@@ -2,10 +2,24 @@
 
 An installable Salesforce package that shows admins **who can access what, and why**. Access comes from a user's profile, permission sets and permission set groups. Access Explorer reads those grants (`PermissionSetAssignment`, `ObjectPermissions`, `FieldPermissions`, `SetupEntityAccess`, `PermissionSetTabSetting` and the system permission fields on `PermissionSet`) and presents them in two tabs:
 
-- **By User**: pick a user, then browse everything they can access. That covers objects (expand an object to see its fields), system permissions, Apex classes, Visualforce pages, custom permissions, tabs, apps, connected apps, flows, and custom metadata types and settings. Select an item to see which profile, permission sets or groups grant it.
+- **By User**: look up a user, then browse what they can access by category: objects (expand an object to see its fields), system permissions, Apex classes, Visualforce pages, custom permissions, tabs, apps, connected apps, flows, and custom metadata types and settings. Select an item to see which profile, permission sets or groups grant it.
 - **By Entity**: pick an object, field, permission or setup entity to see every active user with access. Select a user to see where their access comes from.
 
-Each granting source links to its Setup page, which opens in a new window. Permission set groups list the component permission sets that contribute to the access. Access implied by broader permissions (View All Data, Modify All Data, View All Fields) is called out separately.
+Each tab is a three-pane layout sized to the window, with each pane scrolling on its own:
+
+| Tab       | Left                   | Middle                                   | Right                |
+| --------- | ---------------------- | ---------------------------------------- | -------------------- |
+| By User   | Categories with counts | Items in the category, with a filter box | How the user gets it |
+| By Entity | Entity type and search | Users with access                        | How the user gets it |
+
+Each granting source links to its Setup page, which opens in a new window. Permission set groups list the component permission sets that contribute to the access. Access implied by broader permissions (View All Data, Modify All Data, View All Fields) is called out separately. Permissions appear as compact badges: R, C, E and D for Read, Create, Edit and Delete; VA for View All Records; MA for Modify All Records; VF for View All Fields. Hovering a badge shows the full name, and screen readers announce it.
+
+Other features:
+
+- **Cross-links:** go from an item to everyone who has it, or from a user in the By Entity tab to all of their access.
+- **Shareable state:** the tab and selections are kept in the URL (`c__` parameters), so links can be shared and the browser's Back button works.
+- **Refresh:** the refresh button in the header reloads data after you change permissions in Setup.
+- **Export and copy:** lists export to CSV, and the access sources can be copied as plain text for a ticket or email.
 
 ## Using it
 
@@ -37,6 +51,7 @@ LWC components: `accessExplorer` (the exposed container) → `accessExplorerUser
 - Client input is validated against allow-lists: entity types against the enum, system permission names against the describe, and object and field names against the schema. Search terms are trimmed and capped in length.
 - Errors reach the client as `AuraHandledException` with safe messages only. Internal details are never passed through.
 - Classes declare their sharing, and there is no `without sharing` and no `global`. The UI builds links only from validated Salesforce Ids and never uses `innerHTML`.
+- CSV exports neutralize spreadsheet formulas, guarding against CSV injection.
 
 ## Development
 

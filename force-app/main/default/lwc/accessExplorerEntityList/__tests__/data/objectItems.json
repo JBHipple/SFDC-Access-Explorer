@@ -1,0 +1,18 @@
+[
+  {
+    "entityType": "SOBJECT_TYPE",
+    "key": "Account",
+    "label": "Account",
+    "apiName": "Account",
+    "summary": "Read, Edit",
+    "hasChildren": true
+  },
+  {
+    "entityType": "SOBJECT_TYPE",
+    "key": "Invoice__c",
+    "label": "Invoice",
+    "apiName": "Invoice__c",
+    "summary": "Read",
+    "hasChildren": true
+  }
+]

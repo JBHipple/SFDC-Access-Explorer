@@ -48,14 +48,10 @@ public class AccessExplorerSelectorStub implements IAccessExplorerSelector {
     return result;
   }
 
-  public List<User> searchUsers(String searchTerm, Integer rowLimit) {
+  public List<User> getUsers(Set<Id> userIds) {
     List<User> result = new List<User>();
     for (User record : users) {
-      if (
-        result.size() < rowLimit &&
-        (String.isBlank(searchTerm) ||
-        record.Name.containsIgnoreCase(searchTerm))
-      ) {
+      if (userIds.contains(record.Id)) {
         result.add(record);
       }
     }

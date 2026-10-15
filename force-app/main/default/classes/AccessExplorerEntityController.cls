@@ -25,7 +25,8 @@ public with sharing class AccessExplorerEntityController {
     }
   }
 
-  @AuraEnabled(cacheable=true)
+  /** Not cacheable so a refresh always returns current assignments. */
+  @AuraEnabled
   public static AccessExplorerModels.UserListResult getUsersWithAccess(
     String entityType,
     String entityKey,

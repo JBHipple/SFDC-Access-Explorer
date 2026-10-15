@@ -1,31 +1,98 @@
-import { LightningElement } from "lwc";
+import { api, LightningElement } from "lwc";
 import getUsersWithAccess from "@salesforce/apex/AccessExplorerEntityController.getUsersWithAccess";
-import { errorText, getEntityTypeLabel } from "c/accessExplorerUtils";
+import {
+  downloadCsv,
+  errorText,
+  fileNamePart,
+  getEntityTypeLabel,
+  isSalesforceId
+} from "c/accessExplorerUtils";
 
 /**
  * "By Entity" view: pick an entity, list the users who can access it, and see which
  * profile / permission sets / groups grant a selected user that access.
+ *
+ * @api selection { entityType, entityKey, entityLabel, userId } lets the parent restore
+ * state (deep links, cross-links).
+ *
+ * Events:
+ *  - selectionchange: detail { entityType, entityKey, entityLabel, userId }
+ *  - viewuser: detail { userId } (see everything this user can access)
  */
 export default class AccessExplorerEntityView extends LightningElement {
-  selectedEntity;
+  entity;
+  selectedUserId;
   users = [];
   usersTruncated = false;
   usersLoading = false;
   usersError;
-  selectedUser;
+  searchTerm = "";
   searchRequest = 0;
 
-  get hasEntity() {
-    return !!this.selectedEntity;
+  @api
+  get selection() {
+    return this.currentSelection();
+  }
+  set selection(value) {
+    const next = value || {};
+    const sameEntity =
+      this.selectedKey === next.entityKey &&
+      this.selectedType === next.entityType;
+    if (!sameEntity) {
+      this.entity =
+        next.entityType && next.entityKey
+          ? {
+              entityType: next.entityType,
+              key: next.entityKey,
+              label: next.entityLabel || next.entityKey
+            }
+          : undefined;
+      this.resetUsers();
+    }
+    this.selectedUserId = isSalesforceId(next.userId) ? next.userId : undefined;
   }
 
-  get entityHeading() {
-    if (!this.selectedEntity) {
-      return "";
+  /** Re-fetches the user list and the selected user's sources. */
+  @api
+  refresh() {
+    const work = [];
+    if (this.entity) {
+      work.push(this.loadUsers(this.searchTerm));
     }
-    return `Users with access to ${getEntityTypeLabel(
-      this.selectedEntity.entityType
-    ).toLowerCase()} ${this.selectedEntity.label}`;
+    const sources = this.template.querySelector(
+      "c-access-explorer-source-list"
+    );
+    if (sources) {
+      work.push(sources.refresh());
+    }
+    return Promise.all(work);
+  }
+
+  get hasEntity() {
+    return !!this.entity;
+  }
+
+  get selectedType() {
+    return this.entity ? this.entity.entityType : undefined;
+  }
+
+  get selectedKey() {
+    return this.entity ? this.entity.key : undefined;
+  }
+
+  get selectedLabel() {
+    return this.entity ? this.entity.label : undefined;
+  }
+
+  get entityTypeLabel() {
+    return this.entity ? getEntityTypeLabel(this.entity.entityType) : "";
+  }
+
+  get usersHeading() {
+    if (this.usersLoading || this.usersError) {
+      return "Users with access";
+    }
+    return `Users with access (${this.users.length}${this.usersTruncated ? "+" : ""})`;
   }
 
   get userItems() {
@@ -38,29 +105,54 @@ export default class AccessExplorerEntityView extends LightningElement {
     }));
   }
 
-  get selectedUserId() {
-    return this.selectedUser ? this.selectedUser.id : undefined;
-  }
-
   get selectedUserName() {
-    return this.selectedUser ? this.selectedUser.name : undefined;
+    const user = this.users.find(
+      (candidate) => candidate.id === this.selectedUserId
+    );
+    return user ? user.name : undefined;
   }
 
-  get selectedEntityType() {
-    return this.selectedEntity ? this.selectedEntity.entityType : undefined;
+  get exportDisabled() {
+    return this.users.length === 0;
   }
 
-  get selectedEntityKey() {
-    return this.selectedEntity ? this.selectedEntity.key : undefined;
+  get viewUserDisabled() {
+    return !this.selectedUserId;
   }
 
-  get selectedEntityLabel() {
-    return this.selectedEntity ? this.selectedEntity.label : undefined;
+  currentSelection() {
+    return {
+      entityType: this.selectedType,
+      entityKey: this.selectedKey,
+      entityLabel: this.selectedLabel,
+      userId: this.selectedUserId
+    };
+  }
+
+  notifySelection() {
+    this.dispatchEvent(
+      new CustomEvent("selectionchange", { detail: this.currentSelection() })
+    );
+  }
+
+  resetUsers() {
+    this.users = [];
+    this.usersTruncated = false;
+    this.usersError = undefined;
+    this.searchTerm = "";
+    const userList = this.template.querySelector(".user-list");
+    if (userList) {
+      userList.clearSearch();
+    }
+    if (this.entity) {
+      this.loadUsers("");
+    }
   }
 
   async loadUsers(searchTerm) {
     const request = ++this.searchRequest;
-    const { entityType, key } = this.selectedEntity;
+    const { entityType, key } = this.entity;
+    this.searchTerm = searchTerm;
     this.usersLoading = true;
     try {
       const result = await getUsersWithAccess({
@@ -87,16 +179,10 @@ export default class AccessExplorerEntityView extends LightningElement {
   }
 
   handleEntitySelect(event) {
-    this.selectedEntity = { ...event.detail };
-    this.selectedUser = undefined;
-    this.users = [];
-    const userList = this.template.querySelector(
-      "c-access-explorer-search-list"
-    );
-    if (userList) {
-      userList.clearSearch();
-    }
-    this.loadUsers("");
+    this.entity = { ...event.detail };
+    this.selectedUserId = undefined;
+    this.resetUsers();
+    this.notifySelection();
   }
 
   handleUserSearch(event) {
@@ -108,7 +194,31 @@ export default class AccessExplorerEntityView extends LightningElement {
       (candidate) => candidate.id === event.detail.id
     );
     if (user) {
-      this.selectedUser = user;
+      this.selectedUserId = user.id;
+      this.notifySelection();
     }
+  }
+
+  handleViewUser() {
+    if (this.selectedUserId) {
+      this.dispatchEvent(
+        new CustomEvent("viewuser", {
+          detail: { userId: this.selectedUserId }
+        })
+      );
+    }
+  }
+
+  handleExport() {
+    downloadCsv(
+      `users_with_access_${fileNamePart(this.selectedLabel)}.csv`,
+      ["Name", "Username", "Profile", `${this.entityTypeLabel}`],
+      this.users.map((user) => [
+        user.name,
+        user.username,
+        user.profileName,
+        this.selectedLabel
+      ])
+    );
   }
 }

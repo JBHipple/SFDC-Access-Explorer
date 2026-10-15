@@ -1,34 +1,21 @@
 /**
  * LWC entry points for the "By User" view, plus the shared access-source lookup.
+ * User search itself is handled by lightning-record-picker in the UI.
  */
 public with sharing class AccessExplorerUserController {
-  @TestVisible
-  private static final Integer DEFAULT_USER_LIMIT = 50;
-  @TestVisible
-  private static final Integer MAX_USER_LIMIT = 200;
-
   @AuraEnabled(cacheable=true)
-  public static List<AccessExplorerModels.UserOption> searchUsers(
-    String searchTerm,
-    Integer limitSize
-  ) {
+  public static AccessExplorerModels.UserOption getUser(Id userId) {
     try {
       AccessExplorerSecurity.assertCanUse();
-      Integer rowLimit = limitSize == null ||
-        limitSize < 1
-        ? DEFAULT_USER_LIMIT
-        : Math.min(limitSize, MAX_USER_LIMIT);
-      List<AccessExplorerModels.UserOption> options = new List<AccessExplorerModels.UserOption>();
-      for (
-        User record : new AccessExplorerSelector()
-          .searchUsers(
-            AccessExplorerSecurity.sanitizeSearchTerm(searchTerm),
-            rowLimit
-          )
-      ) {
-        options.add(new AccessExplorerModels.UserOption(record));
+      if (userId == null || userId.getSObjectType() != User.SObjectType) {
+        throw new IllegalArgumentException('A valid user id is required.');
       }
-      return options;
+      List<User> users = new AccessExplorerSelector()
+        .getUsers(new Set<Id>{ userId });
+      if (users.isEmpty()) {
+        throw new IllegalArgumentException('User not found.');
+      }
+      return new AccessExplorerModels.UserOption(users[0]);
     } catch (Exception e) {
       throw AccessExplorerSecurity.toClientException(e);
     }
@@ -46,7 +33,8 @@ public with sharing class AccessExplorerUserController {
     }
   }
 
-  @AuraEnabled(cacheable=true)
+  /** Not cacheable so a refresh always returns current permissions. */
+  @AuraEnabled
   public static List<AccessExplorerModels.EntityItem> getUserFields(
     Id userId,
     String objectName

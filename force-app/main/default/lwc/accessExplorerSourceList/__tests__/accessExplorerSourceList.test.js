@@ -1,6 +1,7 @@
 import { createElement } from "lwc";
 import AccessExplorerSourceList from "c/accessExplorerSourceList";
 import getAccessSources from "@salesforce/apex/AccessExplorerUserController.getAccessSources";
+import { refreshApex } from "@salesforce/apex";
 
 const SOURCES = require("./data/sources.json");
 
@@ -10,6 +11,11 @@ jest.mock(
     const { createApexTestWireAdapter } = require("@salesforce/sfdx-lwc-jest");
     return { default: createApexTestWireAdapter(jest.fn()) };
   },
+  { virtual: true }
+);
+jest.mock(
+  "@salesforce/apex",
+  () => ({ refreshApex: jest.fn(() => Promise.resolve()) }),
   { virtual: true }
 );
 
@@ -30,17 +36,25 @@ function createSourceList(props = SELECTION) {
   return element;
 }
 
+function flushPromises() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 describe("c-access-explorer-source-list", () => {
   afterEach(() => {
     while (document.body.firstChild) {
       document.body.removeChild(document.body.firstChild);
     }
+    jest.clearAllMocks();
   });
 
   it("shows a placeholder until a user and entity are selected", () => {
     const element = createSourceList({ userId: SELECTION.userId });
     expect(element.shadowRoot.querySelector(".placeholder")).not.toBeNull();
-    expect(element.shadowRoot.querySelector(".heading")).toBeNull();
+    expect(element.shadowRoot.querySelector(".subject")).toBeNull();
+    expect(element.shadowRoot.querySelector('[data-id="copy"]').disabled).toBe(
+      true
+    );
   });
 
   it("requests sources for the selection and shows a spinner while loading", async () => {
@@ -51,15 +65,18 @@ describe("c-access-explorer-source-list", () => {
       entityType: "SOBJECT_TYPE",
       entityKey: "Account"
     });
-    expect(element.shadowRoot.querySelector(".heading").textContent).toBe(
-      "How Alice Adams gets access to Account"
+    expect(element.shadowRoot.querySelector(".subject-user").textContent).toBe(
+      "Alice Adams"
     );
+    expect(
+      element.shadowRoot.querySelector(".subject-entity").textContent
+    ).toBe("Object: Account");
     expect(
       element.shadowRoot.querySelector("lightning-spinner")
     ).not.toBeNull();
   });
 
-  it("renders each source with a type badge and a safe setup link", async () => {
+  it("renders each source with a type badge, permission badges and a safe link", async () => {
     const element = createSourceList();
     getAccessSources.emit(SOURCES);
     await Promise.resolve();
@@ -77,22 +94,24 @@ describe("c-access-explorer-source-list", () => {
     expect(profileLink.querySelector(".slds-assistive-text").textContent).toBe(
       "(opens in a new window)"
     );
-    expect(items[0].querySelector(".slds-badge").textContent).toBe("Profile");
-    expect(items[0].querySelector(".granted").textContent).toBe("Read, Edit");
-    expect(items[0].querySelector(".implied")).toBeNull();
+    expect(items[0].querySelector(".type-badge").textContent).toBe("Profile");
+    expect(
+      items[0].querySelector("c-access-explorer-permission-badges").permissions
+    ).toEqual(["Read", "Edit"]);
+    expect(items[0].querySelector(".details")).toBeNull();
 
     expect(items[1].querySelector("a.source-link").getAttribute("href")).toBe(
       "/lightning/setup/PermSetGroups/page?address=%2F0PG000000000001AAA"
     );
     expect(items[1].querySelector(".via").textContent).toBe(
-      "Case Access, Service Basics"
+      "Via Case Access, Service Basics"
     );
 
     expect(items[2].querySelector("a.source-link").getAttribute("href")).toBe(
       "/lightning/setup/PermSets/page?address=%2F0PS000000000001AAA"
     );
     expect(items[2].querySelector(".implied").textContent).toBe(
-      "View All Data permission"
+      "Implied by View All Data permission"
     );
     expect(items[2].querySelector(".session-note")).not.toBeNull();
 
@@ -101,7 +120,59 @@ describe("c-access-explorer-source-list", () => {
     expect(items[3].querySelector(".source-name").textContent).toBe(
       "Mystery Source"
     );
-    expect(items[3].querySelector(".slds-badge").textContent).toBe("Unknown");
+    expect(items[3].querySelector(".type-badge").textContent).toBe("Unknown");
+  });
+
+  it("copies a plain-text summary to the clipboard", async () => {
+    const writeText = jest.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true
+    });
+    const element = createSourceList();
+    const toastHandler = jest.fn();
+    element.addEventListener("lightning__showtoast", toastHandler);
+    getAccessSources.emit(SOURCES);
+    await Promise.resolve();
+
+    const copy = element.shadowRoot.querySelector('[data-id="copy"]');
+    expect(copy.disabled).toBe(false);
+    copy.click();
+    await flushPromises();
+
+    expect(writeText.mock.calls[0][0].split("\n")).toEqual([
+      "How Alice Adams gets access to Object Account:",
+      "- Profile: Standard User — Read, Edit",
+      "- Permission Set Group: Support Bundle — Read (via Case Access, Service Basics)",
+      "- Permission Set: Sales Extras — Read, View All Records (implied by View All Data) (session-based)",
+      "- Unknown: Mystery Source — "
+    ]);
+    expect(toastHandler.mock.calls[0][0].detail.variant).toBe("success");
+  });
+
+  it("reports clipboard failures", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: jest.fn(() => Promise.reject(new Error("no"))) },
+      configurable: true
+    });
+    const element = createSourceList();
+    const toastHandler = jest.fn();
+    element.addEventListener("lightning__showtoast", toastHandler);
+    getAccessSources.emit(SOURCES);
+    await Promise.resolve();
+
+    element.shadowRoot.querySelector('[data-id="copy"]').click();
+    await flushPromises();
+    expect(toastHandler.mock.calls[0][0].detail.variant).toBe("error");
+  });
+
+  it("refreshes the wired sources", async () => {
+    const element = createSourceList();
+    getAccessSources.emit(SOURCES);
+    await Promise.resolve();
+    await element.refresh();
+    expect(refreshApex).toHaveBeenCalledTimes(1);
+    expect(refreshApex.mock.calls[0][0].data).toEqual(SOURCES);
   });
 
   it("shows an empty message when nothing grants access", async () => {
@@ -133,16 +204,16 @@ describe("c-access-explorer-source-list", () => {
     expect(
       element.shadowRoot.querySelector("lightning-spinner")
     ).not.toBeNull();
-    expect(element.shadowRoot.querySelector(".heading").textContent).toBe(
-      "How Alice Adams gets access to Contact"
-    );
+    expect(
+      element.shadowRoot.querySelector(".subject-entity").textContent
+    ).toBe("Object: Contact");
 
     element.userId = "005000000000002AAA";
     element.entityType = "FIELD";
     element.userName = undefined;
     await Promise.resolve();
-    expect(element.shadowRoot.querySelector(".heading").textContent).toBe(
-      "How this user gets access to Contact"
+    expect(element.shadowRoot.querySelector(".subject-user").textContent).toBe(
+      "this user"
     );
   });
 });

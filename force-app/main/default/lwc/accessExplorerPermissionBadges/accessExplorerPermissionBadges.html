@@ -1,0 +1,15 @@
+<template>
+  <template lwc:if={hasBadges}>
+    <span class="badges" title={description}>
+      <span class="slds-assistive-text">{description}</span>
+      <template for:each={badges} for:item="badge">
+        <span key={badge.key} class="entry" aria-hidden="true">
+          <span class={badge.className}>{badge.text}</span>
+          <template lwc:if={badge.note}>
+            <span class="note">via {badge.note}</span>
+          </template>
+        </span>
+      </template>
+    </span>
+  </template>
+</template>

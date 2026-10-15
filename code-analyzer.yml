@@ -1,0 +1,5 @@
+# Salesforce Code Analyzer configuration (used by `npm run scan`).
+# Jest tests are excluded: they are not deployed or packaged (see .forceignore).
+ignores:
+  files:
+    - "**/__tests__/**"

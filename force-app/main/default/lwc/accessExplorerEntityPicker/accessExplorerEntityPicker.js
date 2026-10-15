@@ -1,4 +1,4 @@
-import { LightningElement, api } from "lwc";
+import { api, LightningElement } from "lwc";
 import searchEntities from "@salesforce/apex/AccessExplorerEntityController.searchEntities";
 import {
   ENTITY_TYPES,
@@ -7,26 +7,96 @@ import {
 } from "c/accessExplorerUtils";
 
 const ENTITY_LIMIT = 200;
+const DEFAULT_TYPE = ENTITY_TYPES[0].value;
 
 /**
  * Picks one entity to inspect: an entity type, then a searchable list of entities of
  * that type. Fields are chosen in two steps (object, then field).
  *
+ * The parent can drive the picker by setting selectedType / selectedKey (e.g. from a
+ * deep link or a cross-link); the picker then switches type and reloads.
+ *
  * Events:
  *  - entityselect: detail { entityType, key, label }
  */
 export default class AccessExplorerEntityPicker extends LightningElement {
-  @api selectedKey;
-
-  entityType = ENTITY_TYPES[0].value;
+  entityType = DEFAULT_TYPE;
   fieldObject;
   results = [];
   loading = false;
   error;
   searchRequest = 0;
+  connected = false;
+  reloadScheduled = false;
+  _selectedKey;
+
+  @api
+  get selectedType() {
+    return this.entityType;
+  }
+  set selectedType(value) {
+    const type = ENTITY_TYPES.some((option) => option.value === value)
+      ? value
+      : DEFAULT_TYPE;
+    if (type !== this.entityType) {
+      this.entityType = type;
+      this.fieldObject = undefined;
+      this.syncFieldObject();
+      this.scheduleReload();
+    }
+  }
+
+  @api
+  get selectedKey() {
+    return this._selectedKey;
+  }
+  set selectedKey(value) {
+    this._selectedKey = value;
+    if (this.syncFieldObject()) {
+      this.scheduleReload();
+    }
+  }
 
   connectedCallback() {
+    this.connected = true;
     this.loadResults("");
+  }
+
+  disconnectedCallback() {
+    this.connected = false;
+  }
+
+  /**
+   * For a selected field key ("Account.Industry"), make sure the field list is scoped
+   * to its object. Returns true when the object changed.
+   */
+  syncFieldObject() {
+    const key = this._selectedKey;
+    if (
+      this.entityType !== "FIELD" ||
+      typeof key !== "string" ||
+      !key.includes(".")
+    ) {
+      return false;
+    }
+    const objectName = key.split(".")[0];
+    if (this.fieldObject && this.fieldObject.key === objectName) {
+      return false;
+    }
+    this.fieldObject = { key: objectName, label: objectName };
+    return true;
+  }
+
+  /** Batches setter-driven reloads so selectedType and selectedKey apply together. */
+  scheduleReload() {
+    if (!this.connected || this.reloadScheduled) {
+      return;
+    }
+    this.reloadScheduled = true;
+    Promise.resolve().then(() => {
+      this.reloadScheduled = false;
+      this.restartSearch();
+    });
   }
 
   get typeOptions() {
@@ -64,7 +134,7 @@ export default class AccessExplorerEntityPicker extends LightningElement {
   }
 
   get listSelectedId() {
-    return this.isChoosingObjectForField ? undefined : this.selectedKey;
+    return this.isChoosingObjectForField ? undefined : this._selectedKey;
   }
 
   get truncated() {

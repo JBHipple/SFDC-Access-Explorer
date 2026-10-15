@@ -1,4 +1,6 @@
-import { LightningElement, api, wire } from "lwc";
+import { api, LightningElement, wire } from "lwc";
+import { refreshApex } from "@salesforce/apex";
+import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import getAccessSources from "@salesforce/apex/AccessExplorerUserController.getAccessSources";
 import {
   buildSetupUrl,
@@ -10,6 +12,8 @@ import {
 /**
  * Lists the profile, permission sets and permission set groups that give a user access
  * to one entity. Each source links to its Setup page in a new window.
+ *
+ * Slot "actions": extra header actions supplied by the parent (e.g. cross-links).
  */
 export default class AccessExplorerSourceList extends LightningElement {
   @api userName;
@@ -17,6 +21,7 @@ export default class AccessExplorerSourceList extends LightningElement {
 
   sources;
   error;
+  wiredResult;
   _userId;
   _entityType;
   _entityKey;
@@ -45,6 +50,12 @@ export default class AccessExplorerSourceList extends LightningElement {
     this.updateSelection("_entityKey", value);
   }
 
+  /** Re-fetches sources for the current selection, bypassing the client cache. */
+  @api
+  refresh() {
+    return this.wiredResult ? refreshApex(this.wiredResult) : Promise.resolve();
+  }
+
   /** Clears previous results whenever the selection changes so stale data never shows. */
   updateSelection(field, value) {
     if (this[field] !== value) {
@@ -59,7 +70,9 @@ export default class AccessExplorerSourceList extends LightningElement {
     entityType: "$_entityType",
     entityKey: "$_entityKey"
   })
-  wiredSources({ data, error }) {
+  wiredSources(result) {
+    this.wiredResult = result;
+    const { data, error } = result;
     if (data) {
       this.sources = data;
       this.error = undefined;
@@ -70,21 +83,23 @@ export default class AccessExplorerSourceList extends LightningElement {
   }
 
   get hasSelection() {
-    return !!(this.userId && this.entityType && this.entityKey);
+    return !!(this._userId && this._entityType && this._entityKey);
   }
 
   get isLoading() {
     return this.hasSelection && !this.sources && !this.error;
   }
 
-  get heading() {
-    return `How ${this.userName || "this user"} gets access to ${
-      this.entityLabel || this.entityKey
-    }`;
+  get displayEntity() {
+    return this.entityLabel || this._entityKey;
+  }
+
+  get displayUser() {
+    return this.userName || "this user";
   }
 
   get entityTypeLabel() {
-    return getEntityTypeLabel(this.entityType);
+    return getEntityTypeLabel(this._entityType);
   }
 
   get hasSources() {
@@ -93,6 +108,10 @@ export default class AccessExplorerSourceList extends LightningElement {
 
   get isEmpty() {
     return !!this.sources && this.sources.length === 0;
+  }
+
+  get copyDisabled() {
+    return !this.hasSources;
   }
 
   get sourceViews() {
@@ -107,12 +126,55 @@ export default class AccessExplorerSourceList extends LightningElement {
         url,
         typeLabel,
         linkTitle: `Open ${typeLabel} ${source.name} in a new window`,
-        badgeClass: `slds-badge source-badge source-badge_${source.sourceType}`,
-        grantedText: (source.grantedPermissions || []).join(", "),
+        badgeClass: `type-badge type-badge_${source.sourceType}`,
         hasVia: via.length > 0,
         viaText: via.join(", "),
-        isImplied: !!source.impliedBy
+        isImplied: !!source.impliedBy,
+        hasDetails:
+          !!source.impliedBy || via.length > 0 || source.isSessionBased
       };
     });
+  }
+
+  /** Plain-text summary of the sources, suitable for pasting into a ticket or email. */
+  get summaryText() {
+    const lines = [
+      `How ${this.displayUser} gets access to ${this.entityTypeLabel} ${this.displayEntity}:`
+    ];
+    this.sourceViews.forEach((source) => {
+      let line = `- ${source.typeLabel}: ${source.name} — ${(source.grantedPermissions || []).join(", ")}`;
+      if (source.isImplied) {
+        line += ` (implied by ${source.impliedBy})`;
+      }
+      if (source.hasVia) {
+        line += ` (via ${source.viaText})`;
+      }
+      if (source.isSessionBased) {
+        line += " (session-based)";
+      }
+      lines.push(line);
+    });
+    return lines.join("\n");
+  }
+
+  async handleCopy() {
+    try {
+      await navigator.clipboard.writeText(this.summaryText);
+      this.toast(
+        "Copied",
+        "Access summary copied to the clipboard.",
+        "success"
+      );
+    } catch {
+      this.toast(
+        "Copy failed",
+        "Your browser blocked clipboard access.",
+        "error"
+      );
+    }
+  }
+
+  toast(title, message, variant) {
+    this.dispatchEvent(new ShowToastEvent({ title, message, variant }));
   }
 }

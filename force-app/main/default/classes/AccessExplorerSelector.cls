@@ -82,21 +82,17 @@ public inherited sharing class AccessExplorerSelector implements IAccessExplorer
       .execute();
   }
 
-  public List<User> searchUsers(String searchTerm, Integer rowLimit) {
-    AccessExplorerQueryBuilder builder = new AccessExplorerQueryBuilder(
-        User.SObjectType
-      )
+  public List<User> getUsers(Set<Id> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return new List<User>();
+    }
+    return (List<User>) new AccessExplorerQueryBuilder(User.SObjectType)
       .selectFields(
         new List<String>{ 'Id', 'Name', 'Username', 'IsActive', 'Profile.Name' }
       )
-      .whereEquals('IsActive', true);
-    if (String.isNotBlank(searchTerm)) {
-      builder.whereAnyContains(
-        new List<String>{ 'Name', 'Username', 'Email' },
-        searchTerm
-      );
-    }
-    return (List<User>) builder.orderBy('Name').limitTo(rowLimit).execute();
+      .whereIn('Id', userIds)
+      .limitTo(userIds.size())
+      .execute();
   }
 
   public List<ObjectPermissions> getObjectPermissions(

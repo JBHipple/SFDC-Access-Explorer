@@ -18,6 +18,10 @@ export default class AccessExplorerSearchList extends LightningElement {
   @api loading = false;
   @api emptyMessage = "No results found.";
   @api truncated = false;
+  /** Stretch to fill the parent's height instead of using a fixed-height list. */
+  @api fill = false;
+  /** Hide the visible search label (it remains available to assistive technology). */
+  @api hideLabel = false;
   @api truncatedMessage =
     "Only the first results are shown. Refine your search to narrow the list.";
 
@@ -51,6 +55,14 @@ export default class AccessExplorerSearchList extends LightningElement {
           "slds-listbox__item option" + (selected ? " is-selected" : "")
       };
     });
+  }
+
+  get rootClass() {
+    return this.fill ? "search-list search-list_fill" : "search-list";
+  }
+
+  get inputVariant() {
+    return this.hideLabel ? "label-hidden" : "standard";
   }
 
   get showEmpty() {

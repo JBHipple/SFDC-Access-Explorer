@@ -16,7 +16,8 @@ public interface IAccessExplorerSelector {
     Integer rowLimit
   );
 
-  List<User> searchUsers(String searchTerm, Integer rowLimit);
+  /** Users (active or not) by id, with profile name. */
+  List<User> getUsers(Set<Id> userIds);
 
   List<ObjectPermissions> getObjectPermissions(
     Set<Id> parentIds,

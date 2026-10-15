@@ -1,42 +1,63 @@
 <template>
-  <div class="slds-p-around_medium">
-    <c-access-explorer-search-list
-      label="Search users"
-      placeholder="Search by name, username or email"
-      items={userItems}
-      selected-id={selectedUserId}
-      loading={usersLoading}
-      truncated={usersTruncated}
-      empty-message="No active users match your search."
-      onsearch={handleUserSearch}
-      onselect={handleUserSelect}
-    ></c-access-explorer-search-list>
-    <template lwc:if={usersError}>
+  <div class="view">
+    <div class="user-bar">
+      <template lwc:if={showPicker}>
+        <div class="user-picker">
+          <lightning-record-picker
+            class="picker"
+            label="User"
+            placeholder="Search users by name or username"
+            object-api-name="User"
+            filter={userFilter}
+            display-info={displayInfo}
+            matching-info={matchingInfo}
+            onchange={handleUserPicked}
+          ></lightning-record-picker>
+          <template lwc:if={hasUser}>
+            <lightning-button
+              class="cancel-change"
+              label="Cancel"
+              onclick={handleCancelChange}
+            ></lightning-button>
+          </template>
+        </div>
+      </template>
+      <template lwc:else>
+        <div class="user-summary">
+          <lightning-icon
+            icon-name="standard:user"
+            size="small"
+            alternative-text="User"
+          ></lightning-icon>
+          <div class="user-text">
+            <h2 class="user-name slds-truncate">{userName}</h2>
+            <p class="user-meta slds-truncate slds-text-body_small">
+              {userMeta}
+            </p>
+          </div>
+          <lightning-button
+            class="change-user"
+            label="Change user"
+            icon-name="utility:change_owner"
+            onclick={handleChangeUser}
+          ></lightning-button>
+        </div>
+      </template>
+    </div>
+
+    <template lwc:if={userError}>
       <div
-        class="slds-notify slds-notify_alert slds-alert_error slds-m-top_small users-error"
+        class="slds-notify slds-notify_alert slds-alert_error user-error"
         role="alert"
       >
-        {usersError}
+        {userError}
       </div>
     </template>
 
-    <template lwc:if={selectedUser}>
-      <h2
-        class="slds-text-heading_medium slds-m-top_large slds-m-bottom_small selected-user-heading"
-      >
-        Access for {selectedUser.name}
-      </h2>
-      <lightning-layout multiple-rows>
-        <lightning-layout-item
-          size="12"
-          medium-device-size="6"
-          padding="around-small"
-        >
-          <div
-            class="slds-box slds-theme_default panel"
-            role="region"
-            aria-label="Accessible items"
-          >
+    <template lwc:if={hasUser}>
+      <div class="panes">
+        <nav class="pane pane_nav" aria-label="Access categories">
+          <div class="pane-body">
             <template lwc:if={entitiesLoading}>
               <div class="slds-is-relative loading">
                 <lightning-spinner
@@ -53,37 +74,101 @@
                 {entitiesError}
               </div>
             </template>
-            <template lwc:if={entityGroups}>
-              <c-access-explorer-entity-list
-                groups={entityGroups}
-                user-id={selectedUserId}
-                selected-type={selectedEntityType}
-                selected-key={selectedEntityKey}
-                onentityselect={handleEntitySelect}
-              ></c-access-explorer-entity-list>
-            </template>
+            <lightning-vertical-navigation
+              class="category-nav"
+              selected-item={category}
+              onselect={handleCategorySelect}
+              compact
+            >
+              <lightning-vertical-navigation-section label="Categories">
+                <template for:each={categories} for:item="item">
+                  <lightning-vertical-navigation-item-badge
+                    key={item.entityType}
+                    label={item.label}
+                    name={item.entityType}
+                    badge-count={item.count}
+                    assistive-text={item.assistiveText}
+                  ></lightning-vertical-navigation-item-badge>
+                </template>
+              </lightning-vertical-navigation-section>
+            </lightning-vertical-navigation>
           </div>
-        </lightning-layout-item>
-        <lightning-layout-item
-          size="12"
-          medium-device-size="6"
-          padding="around-small"
-        >
-          <div
-            class="slds-box slds-theme_default panel"
-            role="region"
-            aria-label="Access sources"
-          >
+        </nav>
+
+        <section class="pane" aria-label="Accessible items">
+          <div class="pane-header">
+            <h3 class="slds-text-title_caps pane-title slds-truncate">
+              {categoryLabel}
+            </h3>
+            <lightning-input
+              class="filter"
+              type="search"
+              label="Filter accessible items"
+              variant="label-hidden"
+              placeholder="Filter all categories"
+              value={filterTerm}
+              onchange={handleFilterChange}
+            ></lightning-input>
+            <lightning-button-icon
+              class="export"
+              icon-name="utility:download"
+              variant="border-filled"
+              size="small"
+              alternative-text="Export this category to CSV"
+              title="Export this category to CSV"
+              disabled={exportDisabled}
+              onclick={handleExport}
+            ></lightning-button-icon>
+          </div>
+          <div class="pane-body">
+            <c-access-explorer-entity-list
+              items={categoryItems}
+              user-id={userId}
+              selected-type={selectedType}
+              selected-key={selectedKey}
+              empty-message={emptyMessage}
+              onentityselect={handleEntitySelect}
+            ></c-access-explorer-entity-list>
+          </div>
+        </section>
+
+        <section class="pane" aria-label="Access sources">
+          <div class="pane-body">
             <c-access-explorer-source-list
-              user-id={selectedUserId}
-              user-name={selectedUserName}
-              entity-type={selectedEntityType}
-              entity-key={selectedEntityKey}
-              entity-label={selectedEntityLabel}
-            ></c-access-explorer-source-list>
+              user-id={userId}
+              user-name={sourceUserName}
+              entity-type={selectedType}
+              entity-key={selectedKey}
+              entity-label={selectedLabel}
+            >
+              <lightning-button-icon
+                slot="actions"
+                class="view-entity"
+                icon-name="utility:groups"
+                variant="border-filled"
+                size="small"
+                alternative-text="See everyone with this access"
+                title="See everyone with this access"
+                disabled={viewEntityDisabled}
+                onclick={handleViewEntity}
+              ></lightning-button-icon>
+            </c-access-explorer-source-list>
           </div>
-        </lightning-layout-item>
-      </lightning-layout>
+        </section>
+      </div>
+    </template>
+    <template lwc:else>
+      <div class="empty-state slds-text-color_weak">
+        <lightning-icon
+          icon-name="utility:user"
+          size="small"
+          class="slds-m-bottom_x-small"
+        ></lightning-icon>
+        <p>
+          Choose a user to see everything they can access and where that access
+          comes from.
+        </p>
+      </div>
     </template>
   </div>
 </template>

@@ -1,0 +1,7 @@
+/*
+ * Height shared by the three panes in each view (inherited through shadow DOM).
+ * Sized to the window so the page itself rarely needs to scroll.
+ */
+:host {
+  --ae-pane-height: max(26rem, calc(100vh - 15rem));
+}

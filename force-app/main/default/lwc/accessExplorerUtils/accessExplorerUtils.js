@@ -54,6 +54,21 @@ const SETUP_PAGES = {
 
 const SALESFORCE_ID = /^[a-zA-Z0-9]{15}(?:[a-zA-Z0-9]{3})?$/;
 
+/** Short forms used by permission badges; anything else is shown in full. */
+export const PERMISSION_ABBREVIATIONS = {
+  Read: "R",
+  Create: "C",
+  Edit: "E",
+  Delete: "D",
+  "View All Records": "VA",
+  "Modify All Records": "MA",
+  "View All Fields": "VF"
+};
+
+export function isSalesforceId(value) {
+  return typeof value === "string" && SALESFORCE_ID.test(value);
+}
+
 export function getEntityTypeLabel(entityType) {
   const match = ENTITY_TYPES.find((type) => type.value === entityType);
   return match ? match.label : entityType;
@@ -71,7 +86,7 @@ export function getEntityTypePluralLabel(entityType) {
  */
 export function buildSetupUrl(sourceType, recordId) {
   const page = SETUP_PAGES[sourceType];
-  if (!page || typeof recordId !== "string" || !SALESFORCE_ID.test(recordId)) {
+  if (!page || !isSalesforceId(recordId)) {
     return null;
   }
   return `/lightning/setup/${page}/page?address=${encodeURIComponent(
@@ -118,4 +133,43 @@ export function reduceErrors(errors) {
 export function errorText(errors) {
   const messages = reduceErrors(errors);
   return messages.length ? messages.join(" ") : "An unexpected error occurred.";
+}
+
+/**
+ * Serializes rows to CSV. Cells that a spreadsheet would treat as a formula are
+ * prefixed with an apostrophe to prevent CSV/formula injection.
+ */
+export function toCsv(headers, rows) {
+  const escapeCell = (value) => {
+    let text = value === undefined || value === null ? "" : String(value);
+    if (/^[=+\-@\t\r]/.test(text)) {
+      text = "'" + text;
+    }
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  return [headers, ...rows]
+    .map((row) => row.map(escapeCell).join(","))
+    .join("\r\n");
+}
+
+/** Triggers a browser download of the given rows as a CSV file. */
+export function downloadCsv(fileName, headers, rows) {
+  const link = document.createElement("a");
+  link.href =
+    "data:text/csv;charset=utf-8," + encodeURIComponent(toCsv(headers, rows));
+  link.download = fileName;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/** Builds a safe file name fragment from free text. */
+export function fileNamePart(value) {
+  return (
+    String(value || "export")
+      .replace(/[^a-zA-Z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 60) || "export"
+  );
 }

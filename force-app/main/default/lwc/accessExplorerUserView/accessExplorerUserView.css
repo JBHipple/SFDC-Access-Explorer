@@ -1,7 +1,102 @@
-.panel {
-  height: 100%;
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.user-picker {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  max-width: 40rem;
+}
+
+.picker {
+  flex: 1 1 auto;
+}
+
+.user-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.user-meta {
+  color: var(--slds-g-color-on-surface-1, #5c5c5c);
+}
+
+.panes {
+  display: grid;
+  grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  height: var(--ae-pane-height, 36rem);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--slds-g-color-border-1, #e5e5e5);
+  border-radius: 0.25rem;
+  background: var(--slds-g-color-surface-container-1, #fff);
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--slds-g-color-border-1, #e5e5e5);
+}
+
+.pane-title {
+  flex: none;
+  max-width: 40%;
+}
+
+.filter {
+  flex: 1 1 auto;
+}
+
+.pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+.pane_nav .pane-body {
+  padding: 0.25rem 0;
 }
 
 .loading {
   min-height: 4rem;
+}
+
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+@media (max-width: 64em) {
+  .panes {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .pane-body {
+    max-height: 28rem;
+  }
 }

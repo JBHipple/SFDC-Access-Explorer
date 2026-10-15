@@ -244,4 +244,68 @@ describe("c-access-explorer-entity-picker", () => {
     await flushPromises();
     expect(searchList(element).items[0].label).toBe("MyController");
   });
+
+  it("restores a field selection from selectedType and selectedKey", async () => {
+    const element = createElement("c-access-explorer-entity-picker", {
+      is: AccessExplorerEntityPicker
+    });
+    element.selectedKey = "Account.Industry";
+    element.selectedType = "FIELD";
+    document.body.appendChild(element);
+    await flushPromises();
+
+    expect(searchEntities).toHaveBeenLastCalledWith({
+      entityType: "FIELD",
+      searchTerm: "",
+      objectName: "Account"
+    });
+    expect(element.shadowRoot.querySelector("lightning-pill").label).toBe(
+      "Object: Account"
+    );
+    expect(searchList(element).selectedId).toBe("Account.Industry");
+    expect(searchList(element).fill).toBe(true);
+  });
+
+  it("follows type and key changes made by the parent", async () => {
+    const element = await createPicker();
+    searchEntities.mockClear();
+
+    element.selectedType = "APEX_CLASS";
+    element.selectedKey = "01p000000000001AAA";
+    await flushPromises();
+    expect(searchEntities).toHaveBeenCalledTimes(1);
+    expect(searchEntities).toHaveBeenLastCalledWith({
+      entityType: "APEX_CLASS",
+      searchTerm: "",
+      objectName: null
+    });
+    expect(element.shadowRoot.querySelector("lightning-combobox").value).toBe(
+      "APEX_CLASS"
+    );
+
+    // Same type again: no reload.
+    element.selectedType = "APEX_CLASS";
+    await flushPromises();
+    expect(searchEntities).toHaveBeenCalledTimes(1);
+
+    element.selectedType = "FIELD";
+    element.selectedKey = "Contact.Email";
+    await flushPromises();
+    expect(searchEntities).toHaveBeenLastCalledWith({
+      entityType: "FIELD",
+      searchTerm: "",
+      objectName: "Contact"
+    });
+
+    // A field on the same object keeps the current list.
+    searchEntities.mockClear();
+    element.selectedKey = "Contact.Phone";
+    await flushPromises();
+    expect(searchEntities).not.toHaveBeenCalled();
+
+    // Unknown types fall back to objects.
+    element.selectedType = "BOGUS";
+    await flushPromises();
+    expect(element.selectedType).toBe("SOBJECT_TYPE");
+  });
 });

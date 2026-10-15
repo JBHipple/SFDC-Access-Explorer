@@ -1,8 +1,9 @@
 <template>
-  <div class="search-list">
+  <div class={rootClass}>
     <lightning-input
       type="search"
       label={label}
+      variant={inputVariant}
       placeholder={placeholder}
       value={searchTerm}
       onchange={handleSearchChange}
