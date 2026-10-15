@@ -6,8 +6,6 @@
 public inherited sharing class SetupEntityNameResolver {
   private static final String CUSTOM_METADATA_SUFFIX = '__mdt';
   private static final String STANDARD_TAB_PREFIX = 'standard-';
-  @TestVisible
-  private static final String UNRESOLVED_SUFFIX = ' (name unavailable)';
   private static final Pattern ID_18_PATTERN = Pattern.compile(
     '^[a-zA-Z0-9]{18}$'
   );
@@ -203,7 +201,7 @@ public inherited sharing class SetupEntityNameResolver {
         ? describe.getLabelPlural()
         : splitCamelCase(objectName);
     }
-    return key + UNRESOLVED_SUFFIX;
+    return key;
   }
 
   /** "AIPredictionScore" becomes "AI Prediction Score". */

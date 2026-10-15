@@ -76,5 +76,5 @@ The code doesn't hard-code a namespace anywhere.
 
 ### Known limitations
 
-- Flows granted through `SetupEntityAccess` are referenced by FlowDefinition Ids (`300…`), which only the Tooling API can resolve. Flows whose name can't be resolved show their Id with "(name unavailable)". The same applies to any app missing from `AppMenuItem`.
+- Flows granted through `SetupEntityAccess` are referenced by FlowDefinition Ids (`300…`), which only the Tooling API can resolve. Flows whose name can't be resolved are listed by their Id. The same applies to any app missing from `AppMenuItem`.
 - Each "By Entity" user list shows at most 500 active users. A notice appears when the list is truncated, and the search box narrows it.

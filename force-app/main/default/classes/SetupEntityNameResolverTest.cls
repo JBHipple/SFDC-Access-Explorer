@@ -27,10 +27,7 @@ private class SetupEntityNameResolverTest {
 
     Assert.areEqual('MyController', resolved.get(classId).label);
     Assert.areEqual('ns__MyController', resolved.get(classId).apiName);
-    Assert.areEqual(
-      missingId + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
-      resolved.get(missingId).label
-    );
+    Assert.areEqual(missingId, resolved.get(missingId).label);
   }
 
   @IsTest
@@ -164,7 +161,7 @@ private class SetupEntityNameResolverTest {
       );
     String label = resolved.get('standard-Account').label;
     Assert.isFalse(
-      label.endsWith(SetupEntityNameResolver.UNRESOLVED_SUFFIX),
+      label == 'standard-Account',
       'Tab label should resolve, got: ' + label
     );
   }
@@ -181,15 +178,15 @@ private class SetupEntityNameResolverTest {
       SetupEntityNameResolver.fallbackLabel(tab, 'standard-AIPredictionScore')
     );
     Assert.areEqual(
-      'standard-' + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
+      'standard-',
       SetupEntityNameResolver.fallbackLabel(tab, 'standard-')
     );
     Assert.areEqual(
-      'Custom_Tab' + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
+      'Custom_Tab',
       SetupEntityNameResolver.fallbackLabel(tab, 'Custom_Tab')
     );
     Assert.areEqual(
-      'standard-Account' + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
+      'standard-Account',
       SetupEntityNameResolver.fallbackLabel(
         AccessExplorerModels.EntityType.APP,
         'standard-Account'
@@ -200,7 +197,7 @@ private class SetupEntityNameResolverTest {
   @IsTest
   static void lookupQueriesAreValidForEverySetupEntityType() {
     // Runs each type's real lookup query so a field SOQL rejects fails here instead
-    // of silently degrading to "(name unavailable)".
+    // of silently degrading to unresolved keys.
     SetupEntityNameResolver resolver = new SetupEntityNameResolver();
     for (
       AccessExplorerModels.EntityType entityType : AccessExplorerModels.EntityType.values()
