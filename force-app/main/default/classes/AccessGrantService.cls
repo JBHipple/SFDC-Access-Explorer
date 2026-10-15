@@ -18,6 +18,11 @@ public inherited sharing class AccessGrantService {
   private static final String PERM_ENABLED = 'Enabled';
   private static final String VIEW_ALL_FIELDS_LABEL = 'View All Fields';
 
+  /** Well-formed object or field API name, including namespaced names. */
+  private static final Pattern API_NAME_PATTERN = Pattern.compile(
+    '^[A-Za-z][A-Za-z0-9_]{0,79}$'
+  );
+
   /** ObjectPermissions fields in display order, with their labels. */
   private static final List<List<String>> OBJECT_PERMISSIONS = new List<List<String>>{
     new List<String>{ 'PermissionsRead', PERM_READ },
@@ -846,6 +851,9 @@ public inherited sharing class AccessGrantService {
     String objectName
   ) {
     List<Schema.DescribeFieldResult> fields = new List<Schema.DescribeFieldResult>();
+    if (!AccessExplorerSchemaUtil.isValidObject(objectName)) {
+      return fields;
+    }
     for (
       Schema.SObjectField field : AccessExplorerSchemaUtil.getFieldMap(
           AccessExplorerSchemaUtil.getSObjectType(objectName)
@@ -873,26 +881,47 @@ public inherited sharing class AccessGrantService {
     );
   }
 
+  /**
+   * Returns the canonical object name. Some objects (e.g. UserExternalCredential) carry
+   * object permissions but are hidden from Apex describe; those are accepted when they
+   * are well-formed API names. Object names are only ever used as bind values.
+   */
   private static String validateObjectName(String objectName) {
     Schema.DescribeSObjectResult describe = AccessExplorerSchemaUtil.describeObject(
       objectName
     );
-    if (describe == null) {
-      throw new IllegalArgumentException('Unknown object.');
+    if (describe != null) {
+      return describe.getName();
     }
-    return describe.getName();
+    if (isApiName(objectName)) {
+      return objectName.trim();
+    }
+    throw new IllegalArgumentException('Unknown object.');
   }
 
+  /**
+   * Returns the canonical Object.Field key. Fields of describable objects must exist;
+   * fields of objects hidden from describe only need to be well-formed API names.
+   */
   private static String validateFieldKey(String fieldKey) {
-    Schema.DescribeFieldResult describe = AccessExplorerSchemaUtil.describeField(
-      fieldKey
-    );
-    if (describe == null) {
-      throw new IllegalArgumentException('Unknown field.');
+    String trimmed = fieldKey == null ? '' : fieldKey.trim();
+    String objectName = trimmed.substringBefore('.');
+    String fieldName = trimmed.substringAfter('.');
+    if (AccessExplorerSchemaUtil.isValidObject(objectName)) {
+      Schema.DescribeFieldResult describe = AccessExplorerSchemaUtil.describeField(
+        trimmed
+      );
+      if (describe != null) {
+        return validateObjectName(objectName) + '.' + describe.getName();
+      }
+    } else if (isApiName(objectName) && isApiName(fieldName)) {
+      return objectName + '.' + fieldName;
     }
-    return validateObjectName(fieldKey.substringBefore('.')) +
-      '.' +
-      describe.getName();
+    throw new IllegalArgumentException('Unknown field.');
+  }
+
+  private static Boolean isApiName(String value) {
+    return value != null && API_NAME_PATTERN.matcher(value.trim()).matches();
   }
 
   private static String requireKey(String key) {

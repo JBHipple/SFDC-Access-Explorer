@@ -207,7 +207,7 @@ private class AccessExplorerControllerTest {
       try {
         AccessExplorerUserController.getUserFields(
           UserInfo.getUserId(),
-          'Nope__x'
+          'Nope__x; DELETE'
         );
         Assert.fail('Expected an error');
       } catch (AuraHandledException e) {

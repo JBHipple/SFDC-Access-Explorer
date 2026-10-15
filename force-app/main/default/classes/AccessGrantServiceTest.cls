@@ -333,6 +333,58 @@ private class AccessGrantServiceTest {
   }
 
   @IsTest
+  static void explainsAccessToObjectsHiddenFromDescribe() {
+    // Objects such as UserExternalCredential have object permissions but are not in
+    // Apex describe; they must still be explainable.
+    String hiddenObject = 'HiddenFromDescribe';
+    Assert.isFalse(AccessExplorerSchemaUtil.isValidObject(hiddenObject));
+    AccessExplorerSelectorStub stub = buildUserScenario();
+    stub.objectPermissions.add(
+      AccessExplorerTestDataFactory.objectPermission(
+        SALES_SET,
+        hiddenObject,
+        true,
+        true
+      )
+    );
+    stub.fieldPermissions.add(
+      AccessExplorerTestDataFactory.fieldPermission(
+        SALES_SET,
+        hiddenObject + '.Secret__c',
+        false
+      )
+    );
+    AccessGrantService service = new AccessGrantService(stub);
+
+    List<AccessExplorerModels.AccessSource> objectSources = service.getSourcesForUserEntity(
+      USER_ID,
+      'SOBJECT_TYPE',
+      hiddenObject
+    );
+    Assert.areEqual(
+      SALES_SET,
+      objectSources[objectSources.size() - 1].recordId
+    );
+
+    List<AccessExplorerModels.EntityItem> fields = service.getUserFields(
+      USER_ID,
+      hiddenObject
+    );
+    Assert.areEqual(1, fields.size(), 'Only explicit field permissions apply');
+    Assert.areEqual('Secret__c', fields[0].label);
+
+    List<AccessExplorerModels.AccessSource> fieldSources = service.getSourcesForUserEntity(
+      USER_ID,
+      'FIELD',
+      hiddenObject + '.Secret__c'
+    );
+    Assert.areEqual(2, fieldSources.size(), 'Explicit plus View All Fields');
+    for (AccessExplorerModels.AccessSource source : fieldSources) {
+      Assert.areEqual(SALES_SET, source.recordId);
+    }
+  }
+
+  @IsTest
   static void attributesGroupAccessToContributingComponents() {
     AccessGrantService service = new AccessGrantService(buildUserScenario());
 
@@ -451,12 +503,17 @@ private class AccessGrantServiceTest {
       messages.add(e.getMessage());
     }
     try {
-      service.getUserFields(USER_ID, 'Nope__x');
+      service.getUserFields(USER_ID, 'Account\' OR Name != \'');
     } catch (IllegalArgumentException e) {
       messages.add(e.getMessage());
     }
     try {
       service.getSourcesForUserEntity(USER_ID, 'FIELD', 'Account.Nope__c');
+    } catch (IllegalArgumentException e) {
+      messages.add(e.getMessage());
+    }
+    try {
+      service.getSourcesForUserEntity(USER_ID, 'FIELD', 'Hidden.Bad Field');
     } catch (IllegalArgumentException e) {
       messages.add(e.getMessage());
     }
@@ -474,6 +531,7 @@ private class AccessGrantServiceTest {
       new List<String>{
         'A valid user id is required.',
         'Unknown object.',
+        'Unknown field.',
         'Unknown field.',
         'An entity key is required.',
         'Unknown entity type.'
