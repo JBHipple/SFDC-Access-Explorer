@@ -5,6 +5,7 @@
  */
 public inherited sharing class SetupEntityNameResolver {
   private static final String CUSTOM_METADATA_SUFFIX = '__mdt';
+  private static final String STANDARD_TAB_PREFIX = 'standard-';
   @TestVisible
   private static final String UNRESOLVED_SUFFIX = ' (name unavailable)';
   private static final Pattern ID_18_PATTERN = Pattern.compile(
@@ -13,6 +14,14 @@ public inherited sharing class SetupEntityNameResolver {
   private static final Pattern ID_15_PATTERN = Pattern.compile(
     '^[a-zA-Z0-9]{15}$'
   );
+
+  /**
+   * Lookup objects whose describe lists NamespacePrefix even though SOQL rejects it.
+   * TabDefinition names already include the namespace.
+   */
+  private static final Set<Schema.SObjectType> NO_NAMESPACE_COLUMN = new Set<Schema.SObjectType>{
+    TabDefinition.SObjectType
+  };
 
   private final IAccessExplorerSelector selector;
 
@@ -45,6 +54,7 @@ public inherited sharing class SetupEntityNameResolver {
         apiNameField
       };
       if (
+        !NO_NAMESPACE_COLUMN.contains(objectType) &&
         AccessExplorerSchemaUtil.getFieldMap(objectType)
           .containsKey('namespaceprefix')
       ) {
@@ -162,12 +172,44 @@ public inherited sharing class SetupEntityNameResolver {
           : new AccessExplorerModels.EntityItem(
               entityType,
               key,
-              key + UNRESOLVED_SUFFIX,
+              fallbackLabel(entityType, key),
               key
             )
       );
     }
     return byRequestedKey;
+  }
+
+  /**
+   * Label for a key the lookup object does not return. Standard tabs for features that
+   * are not fully enabled are missing from TabDefinition but have readable names
+   * ("standard-AIPredictionScore"), so those get a derived label.
+   */
+  @TestVisible
+  private static String fallbackLabel(
+    AccessExplorerModels.EntityType entityType,
+    String key
+  ) {
+    if (
+      entityType == AccessExplorerModels.EntityType.TAB &&
+      key.startsWith(STANDARD_TAB_PREFIX) &&
+      key.length() > STANDARD_TAB_PREFIX.length()
+    ) {
+      String objectName = key.substringAfter(STANDARD_TAB_PREFIX);
+      Schema.DescribeSObjectResult describe = AccessExplorerSchemaUtil.describeObject(
+        objectName
+      );
+      return describe != null
+        ? describe.getLabelPlural()
+        : splitCamelCase(objectName);
+    }
+    return key + UNRESOLVED_SUFFIX;
+  }
+
+  /** "AIPredictionScore" becomes "AI Prediction Score". */
+  private static String splitCamelCase(String value) {
+    return value.replaceAll('([A-Z]+)([A-Z][a-z])', '$1 $2')
+      .replaceAll('([a-z0-9])([A-Z])', '$1 $2');
   }
 
   public List<AccessExplorerModels.EntityItem> search(

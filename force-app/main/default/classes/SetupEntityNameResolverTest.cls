@@ -154,4 +154,64 @@ private class SetupEntityNameResolverTest {
       .search(AccessExplorerModels.EntityType.APEX_CLASS, 'AccessGrantServ', 5);
     Assert.isFalse(found.isEmpty());
   }
+
+  @IsTest
+  static void resolvesRealTabsEndToEnd() {
+    Map<String, AccessExplorerModels.EntityItem> resolved = new SetupEntityNameResolver()
+      .resolve(
+        AccessExplorerModels.EntityType.TAB,
+        new Set<String>{ 'standard-Account' }
+      );
+    String label = resolved.get('standard-Account').label;
+    Assert.isFalse(
+      label.endsWith(SetupEntityNameResolver.UNRESOLVED_SUFFIX),
+      'Tab label should resolve, got: ' + label
+    );
+  }
+
+  @IsTest
+  static void derivesLabelsForStandardTabsMissingFromTabDefinition() {
+    AccessExplorerModels.EntityType tab = AccessExplorerModels.EntityType.TAB;
+    Assert.areEqual(
+      Schema.SObjectType.Account.getLabelPlural(),
+      SetupEntityNameResolver.fallbackLabel(tab, 'standard-Account')
+    );
+    Assert.areEqual(
+      'AI Prediction Score',
+      SetupEntityNameResolver.fallbackLabel(tab, 'standard-AIPredictionScore')
+    );
+    Assert.areEqual(
+      'standard-' + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
+      SetupEntityNameResolver.fallbackLabel(tab, 'standard-')
+    );
+    Assert.areEqual(
+      'Custom_Tab' + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
+      SetupEntityNameResolver.fallbackLabel(tab, 'Custom_Tab')
+    );
+    Assert.areEqual(
+      'standard-Account' + SetupEntityNameResolver.UNRESOLVED_SUFFIX,
+      SetupEntityNameResolver.fallbackLabel(
+        AccessExplorerModels.EntityType.APP,
+        'standard-Account'
+      )
+    );
+  }
+
+  @IsTest
+  static void lookupQueriesAreValidForEverySetupEntityType() {
+    // Runs each type's real lookup query so a field SOQL rejects fails here instead
+    // of silently degrading to "(name unavailable)".
+    SetupEntityNameResolver resolver = new SetupEntityNameResolver();
+    for (
+      AccessExplorerModels.EntityType entityType : AccessExplorerModels.EntityType.values()
+    ) {
+      if (SetupEntityNameResolver.supports(entityType)) {
+        try {
+          resolver.search(entityType, null, 1);
+        } catch (QueryException e) {
+          Assert.fail(entityType + ' lookup query failed: ' + e.getMessage());
+        }
+      }
+    }
+  }
 }
